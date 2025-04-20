@@ -1,6 +1,6 @@
 import { ILock } from "../interfaces/lock";
 import { RunningLockEntry, WaitingLockEntry } from "../interfaces/lock-entry";
-import { LockOptions } from "./mutex-lock";
+import { LockOptions } from "./simple-lock";
 
 export type PoolLockOptions = LockOptions & { concurrent?: number};
 

@@ -4,7 +4,7 @@ import { PoolLock, PoolLockOptions } from "./pool-lock";
 
 export type LockOptions = { queueType?: QueueType };
 
-export class MutexLock implements ILock{
+export class SimpleLock implements ILock{
   private readonly poolLock: PoolLock;
 
   constructor(options?: LockOptions){
