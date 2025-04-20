@@ -1,0 +1,1 @@
+export type QueueType = 'FIFO' | 'LIFO';
