@@ -1,39 +1,46 @@
 import { setTimeout } from 'timers/promises';
 import { SimpleLock } from '../../src/locks/simple-lock';
 
-test('simple lock prevent concurrent access to resource', async () => {
+class Task {
+  constructor(
+    private readonly result: string,
+    private readonly lock?: SimpleLock
+  ) {}
+
+  public async run(timeout: number, resultsInOrder: string[]): Promise<string> {
+    return new Promise<string>(async (resolve, reject) => {
+      try {
+        if (this.lock) {
+          await this.lock.lock();
+        }
+
+        await setTimeout(timeout, undefined);
+
+        resultsInOrder.push(this.result);
+        resolve(this.result);
+      } finally {
+        if (this.lock) {
+          this.lock.unlock();
+        }
+      }
+    });
+  }
+}
+
+test("simple lock prevent concurrent access to resource", async () => {
+  const resultsInOrderWithoutLock = new Array<string>();
+  const promisesWithoutLock = [new Task("A").run(30, resultsInOrderWithoutLock), new Task("B").run(10, resultsInOrderWithoutLock)];
+
   const lock = new SimpleLock();
+  const resultsInOrderWithLock = new Array<string>();
+  const promisesWithLock = [new Task("A", lock).run(30, resultsInOrderWithLock), new Task("B", lock).run(10, resultsInOrderWithLock)];
 
-  const resultsInFinishOrder = new Array<string>();
+  await Promise.all(promisesWithoutLock);
+  await Promise.all(promisesWithLock);
 
-  const taskA = new Promise<string>(async (resolve, reject) => {
-    const result = 'A';
-    try{
-      await lock.lock();
-      await setTimeout(20, undefined);
+  expect(resultsInOrderWithoutLock[0]).toBe("B");
+  expect(resultsInOrderWithoutLock[1]).toBe("A");
 
-      resultsInFinishOrder.push(result);
-      resolve(result);
-    }finally{
-      lock.unlock();
-    }
-  });
-
-  const taskB = new Promise<string>(async (resolve, reject) => {
-    const result = 'B';
-    try{
-      await lock.lock();
-      await setTimeout(10, undefined);
-
-      resultsInFinishOrder.push(result);
-      resolve(result);
-    }finally{
-      lock.unlock();
-    }
-  });
-
-  await Promise.all([taskA, taskB]);
-
-  expect(resultsInFinishOrder[0]).toBe('A');
-  expect(resultsInFinishOrder[1]).toBe('B');
+  expect(resultsInOrderWithLock[0]).toBe("A");
+  expect(resultsInOrderWithLock[1]).toBe("B");
 });
