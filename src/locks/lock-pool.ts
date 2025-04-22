@@ -79,8 +79,6 @@ export class LockPool implements Lock{
       case 'LIFO':
         lockTask =  this.waitingQueue.pop();
         break;
-      default:
-        lockTask =  this.waitingQueue.shift();
     }
 
     return lockTask;

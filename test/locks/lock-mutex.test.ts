@@ -1,6 +1,6 @@
-import { setTimeout } from 'timers/promises';
+import { setTimeout } from "timers/promises";
 import { LockMutex } from "../../src/locks/lock-mutex";
-import { Lock } from '../../src/interfaces/lock';
+import { Lock } from "../../src/interfaces/lock";
 
 class Task {
   constructor(
@@ -17,7 +17,7 @@ class Task {
 
         await setTimeout(timeout, undefined);
 
-        if(resultsInOrder){
+        if (resultsInOrder) {
           resultsInOrder.push(this.result);
         }
 
@@ -83,24 +83,52 @@ test("lock mutex: prevent concurrent access to resource LIFO", async () => {
   expect(resultsInOrder[2]).toBe("B");
 });
 
-test("lock mutex: method locked", async () => {
+test("lock: method locked", async () => {
   const lock = new LockMutex();
-  const promises = [new Task("A", lock).run(120), new Task("B", lock).run(60), new Task("C", lock).run(10)];
-  Promise.all(promises);
+
+  await lock.lock();
 
   expect(lock.locked()).toBe(true);
 });
 
-test("lock mutex: method tryLock true", async () => {
+test("lock: method unlocked", async () => {
+  const lock = new LockMutex();
+
+  await lock.lock();
+  lock.unlock();
+
+  expect(lock.locked()).toBe(false);
+});
+
+test("lock: method unlocked multiple times", async () => {
+  const lock = new LockMutex();
+
+  await lock.lock();
+  lock.unlock();
+  lock.unlock();
+
+  expect(lock.locked()).toBe(false);
+});
+
+test("lock: method tryLock true", async () => {
   const lock = new LockMutex();
 
   expect(lock.tryLock()).toBe(true);
 });
 
-test("lock mutex: method tryLock false", async () => {
+test("lock: method tryLock false (waiting lock)", async () => {
   const lock = new LockMutex();
   const promises = [new Task("A", lock).run(120), new Task("B", lock).run(60), new Task("C", lock).run(10)];
   Promise.all(promises);
+
+  expect(lock.tryLock()).toBe(false);
+});
+
+test("lock: method tryLock false (running lock)", async () => {
+  const lock = new LockMutex();
+  const promises = [new Task("A", lock).run(120)];
+  Promise.all(promises);
+  await setTimeout(10, undefined);
 
   expect(lock.tryLock()).toBe(false);
 });

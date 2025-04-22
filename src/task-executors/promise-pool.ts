@@ -37,11 +37,11 @@ export class PromisePool<T> implements TaskExecutor<T>{
   }
 
   private async enqueueAndRun<T>(task: () => Promise<T>): Promise<T> {
-    const releaseSlot = await this.acquire();
+    const release = await this.acquire();
     try {
       return await task();
     } finally {
-      releaseSlot();
+      release();
     }
   }
 
@@ -70,15 +70,13 @@ export class PromisePool<T> implements TaskExecutor<T>{
 
   private getNextTaskToRun(): TaskEntry | undefined {
     let nextTask: TaskEntry | undefined;
-    switch(this.options.queueType){
-      case 'FIFO':
+    switch (this.options.queueType) {
+      case "FIFO":
         nextTask = this.waitingQueue.shift();
         break;
-      case 'LIFO':
-        nextTask =  this.waitingQueue.pop();
+      case "LIFO":
+        nextTask = this.waitingQueue.pop();
         break;
-      default:
-        nextTask =  this.waitingQueue.shift();
     }
 
     return nextTask;

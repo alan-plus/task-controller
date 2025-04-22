@@ -1,1 +1,1 @@
-export type QueueType = 'FIFO' | 'LIFO';
+export type QueueType = "FIFO" | "LIFO";
