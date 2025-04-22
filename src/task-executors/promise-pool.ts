@@ -30,7 +30,7 @@ export class PromisePool<T> implements TaskExecutor<T>{
 
   private async acquire(): Promise<ReleaseFunction> {
     return new Promise<ReleaseFunction>((resolve, reject) => {
-      const taskEntry = { resolve, reject } as TaskEntry;
+      const taskEntry = { resolve, reject } satisfies TaskEntry;
       this.waitingQueue.push(taskEntry);
       this.dispatchNextTask();
     });

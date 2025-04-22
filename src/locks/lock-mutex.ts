@@ -12,7 +12,7 @@ export class LockMutex implements Lock {
       options = {};
     }
 
-    this.poolLock = new LockPool({ ...options, concurrent: 1 } as PoolLockOptions);
+    this.poolLock = new LockPool({ ...options, concurrentLimit: 1 } satisfies PoolLockOptions);
   }
 
   public async lock(): Promise<Lock> {

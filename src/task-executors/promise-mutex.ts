@@ -12,7 +12,7 @@ export class PromiseMutex<T> implements TaskExecutor<T>{
       options = {};
     }
 
-    this.poolTaskExecutor = new PromisePool({ ...options, concurrentLimit: 1 } as PromisePoolOptions);
+    this.poolTaskExecutor = new PromisePool({ ...options, concurrentLimit: 1 } satisfies PromisePoolOptions);
   }
 
   public async run<T>(task: () => Promise<T>): Promise<T> {
