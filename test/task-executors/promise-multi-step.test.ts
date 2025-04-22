@@ -41,9 +41,9 @@ test("promise multi step: prevent or allow limited concurrent step execution", a
   stepResultsArray.push(new Array<string>());
 
   await taskExecutor.runMany([
-    (stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) => task("A",100, stepResultsArray, stepLock1, stepLock2, stepLock3),
-    (stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) => task("B",35, stepResultsArray, stepLock1, stepLock2, stepLock3), 
-    (stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) => task("C",5, stepResultsArray, stepLock1, stepLock2, stepLock3), 
+    (stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) => task("A", 140, stepResultsArray, stepLock1, stepLock2, stepLock3),
+    (stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) => task("B", 40, stepResultsArray, stepLock1, stepLock2, stepLock3),
+    (stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) => task("C", 5, stepResultsArray, stepLock1, stepLock2, stepLock3),
   ]);
 
   expect(stepResultsArray[0][0]).toBe("A");
