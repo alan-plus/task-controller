@@ -5,22 +5,25 @@ name: Test Coverage
 jobs:
 
   build:
-    name: Build
+    name: Export test to Coveralls
     runs-on: ubuntu-latest
+    
     steps:
-
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
     - name: Use Node.js 16.x
       uses: actions/setup-node@v3
       with:
         node-version: 16.x
 
-    - run: npm install
-    - run: npm run coverage
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run Test
+      run: npm run coverage
 
     - name: Coveralls GitHub Action
       uses: coverallsapp/github-action@v2.3.6
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
-        debug: true

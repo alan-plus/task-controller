@@ -1,16 +1,28 @@
 {
   "name": "pro-task",
   "version": "0.0.1-beta",
+  "private": false,
+  "homepage": "https://github.com/alan-plus/pro-task",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alan-plus/pro-task.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alan-plus/pro-task/issues"
+  },
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "jest",
     "coverage": "jest --coverage"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Alan Pro",
+  "license": "MIT",
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/node": "^22.14.1",

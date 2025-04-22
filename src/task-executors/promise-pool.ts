@@ -7,14 +7,14 @@ export type PromisePoolOptions = PromiseMutexOptions & { concurrentLimit?: numbe
 
 const defaultOptions: Required<PromisePoolOptions> = { concurrentLimit: 1, queueType: 'FIFO' };
 
-export class PromisePool<T> implements TaskExecutor<T>{
+export class PromisePool<T> implements TaskExecutor<T> {
   private readonly options: Required<PromisePoolOptions>;
 
   private readonly waitingQueue = new Array<TaskEntry>();
   private readonly runningQueue = new Set<TaskEntry>();
-  private readonly expiredQueue = new Array<TaskEntry>();
+  //private readonly expiredQueue = new Array<TaskEntry>();
 
-  constructor(options?: PromisePoolOptions){
+  constructor(options?: PromisePoolOptions) {
     this.options = this.sanitizeOptions(options, defaultOptions);
   }
 
@@ -24,7 +24,7 @@ export class PromisePool<T> implements TaskExecutor<T>{
 
   public async runMany<T>(tasks: Array<() => Promise<T>>): Promise<T[]> {
     const promises = tasks.map((task) => this.enqueueAndRun(task));
-    
+
     return Promise.all(promises);
   }
 
@@ -82,27 +82,25 @@ export class PromisePool<T> implements TaskExecutor<T>{
     return nextTask;
   }
 
-  private sanitizeOptions(options: PromisePoolOptions | undefined, 
-    defaultOptions: Required<PromisePoolOptions>): Required<PromisePoolOptions> {
-
-    if(options === null || options === undefined || Array.isArray(options) || typeof options !== 'object'){
+  private sanitizeOptions(options: PromisePoolOptions | undefined, defaultOptions: Required<PromisePoolOptions>): Required<PromisePoolOptions> {
+    if (options === null || options === undefined || Array.isArray(options) || typeof options !== "object") {
       return defaultOptions;
     }
 
-    const sanitizedOptions: PromisePoolOptions = {...defaultOptions};
+    const sanitizedOptions: PromisePoolOptions = { ...defaultOptions };
 
-    for(const key in defaultOptions){
+    for (const key in defaultOptions) {
       const typedKey = key as keyof PromisePoolOptions;
 
       const defaultValue = defaultOptions[typedKey];
       const value = options[typedKey] as any;
-      if(value === null || value === undefined){
+      if (value === null || value === undefined) {
         continue;
       }
 
       const defaultValueType = typeof defaultValue;
       const valueType = typeof value;
-      if(defaultValueType !== valueType){
+      if (defaultValueType !== valueType) {
         continue;
       }
 
