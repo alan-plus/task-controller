@@ -1,8 +1,8 @@
-import { ILock } from "./lock";
+import { Lock } from "./lock";
 
-export interface WaitingLockEntry extends RunningLockEntry { 
-  resolve(result: ILock): void;
+export interface WaitingLockEntry extends RunningLockEntry {
+  resolve(result: Lock): void;
   reject(reason?: any): void;
-};
+}
 
-export interface RunningLockEntry { };
+export interface RunningLockEntry {}

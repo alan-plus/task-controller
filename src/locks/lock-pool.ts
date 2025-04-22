@@ -1,12 +1,12 @@
-import { ILock } from "../interfaces/lock";
+import { Lock } from "../interfaces/lock";
 import { RunningLockEntry, WaitingLockEntry } from "../interfaces/lock-entry";
-import { LockOptions } from "./simple-lock";
+import { LockOptions } from "./lock-mutex";
 
-export type PoolLockOptions = LockOptions & { concurrent?: number};
+export type PoolLockOptions = LockOptions & { concurrentLimit?: number};
 
-const defaultOptions: Required<PoolLockOptions> = { concurrent: 1, queueType: 'FIFO' };
+const defaultOptions: Required<PoolLockOptions> = { concurrentLimit: 1, queueType: 'FIFO' };
 
-export class PoolLock implements ILock{
+export class LockPool implements Lock{
   private readonly options: Required<PoolLockOptions>;
 
   private readonly waitingQueue = new Array<WaitingLockEntry>();
@@ -16,8 +16,8 @@ export class PoolLock implements ILock{
     this.options = this.sanitizeOptions(options, defaultOptions);
   }
 
-  public async lock(): Promise<ILock> {
-    return new Promise<ILock>((resolve, reject) => {
+  public async lock(): Promise<Lock> {
+    return new Promise<Lock>((resolve, reject) => {
       const lockEntry = { resolve, reject } satisfies WaitingLockEntry;
       this.waitingQueue.push(lockEntry);
       this.dispatchNextLock();
@@ -30,7 +30,7 @@ export class PoolLock implements ILock{
       return false;
     }
 
-    const conncurrentLimitReached = this.runningQueue.length >= this.options.concurrent;
+    const conncurrentLimitReached = this.runningQueue.length >= this.options.concurrentLimit;
     if (conncurrentLimitReached) {
       return false;
     }
@@ -50,9 +50,14 @@ export class PoolLock implements ILock{
     this.dispatchNextLock();
   }
 
+  public locked(): boolean {
+    const conncurrentLimitReached = this.runningQueue.length >= this.options.concurrentLimit;
+
+    return conncurrentLimitReached;
+  }
+
   private dispatchNextLock(): void {
-    const conncurrentLimitReached = this.runningQueue.length >= this.options.concurrent;
-    if (conncurrentLimitReached) {
+    if (this.locked()) {
       return;
     }
 

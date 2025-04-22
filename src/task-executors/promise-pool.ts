@@ -1,19 +1,20 @@
 import { ReleaseFunction } from "../types/release-function.type";
 import { TaskEntry } from "../interfaces/task-entry";
-import { MutexTaskExecutorOptions } from "./mutex-task-executor";
+import { PromiseMutexOptions } from "./promise-mutex";
+import { TaskExecutor } from "../interfaces/task.executor";
 
-export type PoolTaskExecutorOptions = MutexTaskExecutorOptions & { concurrent?: number};
+export type PromisePoolOptions = PromiseMutexOptions & { concurrentLimit?: number};
 
-const defaultOptions: Required<PoolTaskExecutorOptions> = { concurrent: 1, queueType: 'FIFO' };
+const defaultOptions: Required<PromisePoolOptions> = { concurrentLimit: 1, queueType: 'FIFO' };
 
-export class PoolTaskExecutor {
-  private readonly options: Required<PoolTaskExecutorOptions>;
+export class PromisePool<T> implements TaskExecutor<T>{
+  private readonly options: Required<PromisePoolOptions>;
 
   private readonly waitingQueue = new Array<TaskEntry>();
   private readonly runningQueue = new Set<TaskEntry>();
   private readonly expiredQueue = new Array<TaskEntry>();
 
-  constructor(options?: PoolTaskExecutorOptions){
+  constructor(options?: PromisePoolOptions){
     this.options = this.sanitizeOptions(options, defaultOptions);
   }
 
@@ -22,13 +23,9 @@ export class PoolTaskExecutor {
   }
 
   public async runMany<T>(tasks: Array<() => Promise<T>>): Promise<T[]> {
-    const results = new Array<T>();
+    const promises = tasks.map((task) => this.enqueueAndRun(task));
     
-    tasks.forEach(async (task) => {
-      results.push(await this.enqueueAndRun(task));
-    });
-    
-    return results;
+    return Promise.all(promises);
   }
 
   private async acquire(): Promise<ReleaseFunction> {
@@ -49,7 +46,7 @@ export class PoolTaskExecutor {
   }
 
   private dispatchNextTask(): void {
-    const conncurrentLimitReached = this.runningQueue.size >= this.options.concurrent;
+    const conncurrentLimitReached = this.runningQueue.size >= this.options.concurrentLimit;
     if (conncurrentLimitReached) {
       return;
     }
@@ -87,17 +84,17 @@ export class PoolTaskExecutor {
     return nextTask;
   }
 
-  private sanitizeOptions(options: PoolTaskExecutorOptions | undefined, 
-    defaultOptions: Required<PoolTaskExecutorOptions>): Required<PoolTaskExecutorOptions> {
+  private sanitizeOptions(options: PromisePoolOptions | undefined, 
+    defaultOptions: Required<PromisePoolOptions>): Required<PromisePoolOptions> {
 
     if(options === null || options === undefined || Array.isArray(options) || typeof options !== 'object'){
       return defaultOptions;
     }
 
-    const sanitizedOptions: PoolTaskExecutorOptions = {...defaultOptions};
+    const sanitizedOptions: PromisePoolOptions = {...defaultOptions};
 
     for(const key in defaultOptions){
-      const typedKey = key as keyof PoolTaskExecutorOptions;
+      const typedKey = key as keyof PromisePoolOptions;
 
       const defaultValue = defaultOptions[typedKey];
       const value = options[typedKey] as any;
@@ -114,6 +111,6 @@ export class PoolTaskExecutor {
       sanitizedOptions[typedKey] = value;
     }
 
-    return sanitizedOptions as Required<PoolTaskExecutorOptions>;
+    return sanitizedOptions as Required<PromisePoolOptions>;
   }
 }

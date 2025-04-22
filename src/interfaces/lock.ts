@@ -1,6 +1,6 @@
-export interface ILock {
-  lock(): Promise<ILock>;
+export interface Lock {
+  lock(): Promise<Lock>;
   tryLock(): boolean;
   unlock(): void;
-
+  locked(): boolean;
 }
