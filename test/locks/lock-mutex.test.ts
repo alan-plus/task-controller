@@ -34,17 +34,17 @@ class Task {
 test("lock mutex: prevent concurrent access to resource (default options)", async () => {
   const resultsInOrderWithoutLock = new Array<string>();
   const promisesWithoutLock = [
-    new Task("A").run(50, resultsInOrderWithoutLock), 
-    new Task("B").run(20, resultsInOrderWithoutLock), 
-    new Task("C").run(10, resultsInOrderWithoutLock)
+    new Task("A").run(120, resultsInOrderWithoutLock),
+    new Task("B").run(60, resultsInOrderWithoutLock),
+    new Task("C").run(10, resultsInOrderWithoutLock),
   ];
 
   const lock = new LockMutex();
   const resultsInOrderWithLock = new Array<string>();
   const promisesWithLock = [
-    new Task("A", lock).run(30, resultsInOrderWithLock), 
-    new Task("B", lock).run(20, resultsInOrderWithLock), 
-    new Task("C", lock).run(10, resultsInOrderWithLock)
+    new Task("A", lock).run(120, resultsInOrderWithLock),
+    new Task("B", lock).run(60, resultsInOrderWithLock),
+    new Task("C", lock).run(10, resultsInOrderWithLock),
   ];
 
   await Promise.all(promisesWithoutLock);
@@ -53,20 +53,16 @@ test("lock mutex: prevent concurrent access to resource (default options)", asyn
   expect(resultsInOrderWithoutLock[0]).toBe("C");
   expect(resultsInOrderWithoutLock[1]).toBe("B");
   expect(resultsInOrderWithoutLock[2]).toBe("A");
-  
+
   expect(resultsInOrderWithLock[0]).toBe("A");
   expect(resultsInOrderWithLock[1]).toBe("B");
   expect(resultsInOrderWithLock[2]).toBe("C");
 });
 
 test("lock mutex: prevent concurrent access to resource FIFO", async () => {
-  const lock = new LockMutex({queueType: 'FIFO'});
+  const lock = new LockMutex({ queueType: "FIFO" });
   const resultsInOrder = new Array<string>();
-  const promises = [
-    new Task("A", lock).run(30, resultsInOrder), 
-    new Task("B", lock).run(20, resultsInOrder), 
-    new Task("C", lock).run(10, resultsInOrder)
-  ];
+  const promises = [new Task("A", lock).run(120, resultsInOrder), new Task("B", lock).run(60, resultsInOrder), new Task("C", lock).run(10, resultsInOrder)];
 
   await Promise.all(promises);
 
@@ -76,13 +72,9 @@ test("lock mutex: prevent concurrent access to resource FIFO", async () => {
 });
 
 test("lock mutex: prevent concurrent access to resource LIFO", async () => {
-  const lock = new LockMutex({queueType: 'LIFO'});
+  const lock = new LockMutex({ queueType: "LIFO" });
   const resultsInOrder = new Array<string>();
-  const promises = [
-    new Task("A", lock).run(30, resultsInOrder), 
-    new Task("B", lock).run(20, resultsInOrder), 
-    new Task("C", lock).run(10, resultsInOrder)
-  ];
+  const promises = [new Task("A", lock).run(120, resultsInOrder), new Task("B", lock).run(60, resultsInOrder), new Task("C", lock).run(10, resultsInOrder)];
 
   await Promise.all(promises);
 
@@ -93,7 +85,7 @@ test("lock mutex: prevent concurrent access to resource LIFO", async () => {
 
 test("lock mutex: method locked", async () => {
   const lock = new LockMutex();
-  const promises = [new Task("A", lock).run(30), new Task("B", lock).run(10)];
+  const promises = [new Task("A", lock).run(120), new Task("B", lock).run(60), new Task("C", lock).run(10)];
   Promise.all(promises);
 
   expect(lock.locked()).toBe(true);
@@ -107,7 +99,7 @@ test("lock mutex: method tryLock true", async () => {
 
 test("lock mutex: method tryLock false", async () => {
   const lock = new LockMutex();
-  const promises = [new Task("A", lock).run(30), new Task("B", lock).run(10)];
+  const promises = [new Task("A", lock).run(120), new Task("B", lock).run(60), new Task("C", lock).run(10)];
   Promise.all(promises);
 
   expect(lock.tryLock()).toBe(false);

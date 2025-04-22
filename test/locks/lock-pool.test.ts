@@ -31,17 +31,17 @@ class Task {
 test("lock pool: allow limited concurrent access to resource", async () => {
   const resultsInOrderWithoutLock = new Array<string>();
   const promisesWithoutLock = [
-    new Task("A").run(30, resultsInOrderWithoutLock), 
-    new Task("B").run(20, resultsInOrderWithoutLock), 
-    new Task("C").run(10, resultsInOrderWithoutLock)
+    new Task("A").run(120, resultsInOrderWithoutLock),
+    new Task("B").run(60, resultsInOrderWithoutLock),
+    new Task("C").run(10, resultsInOrderWithoutLock),
   ];
 
-  const lock = new LockPool({concurrentLimit: 2});
+  const lock = new LockPool({ concurrentLimit: 2 });
   const resultsInOrderWithLock = new Array<string>();
   const promisesWithLock = [
-    new Task("A", lock).run(30, resultsInOrderWithLock), 
-    new Task("B", lock).run(20, resultsInOrderWithLock),
-    new Task("C", lock).run(10, resultsInOrderWithLock)
+    new Task("A", lock).run(120, resultsInOrderWithLock),
+    new Task("B", lock).run(60, resultsInOrderWithLock),
+    new Task("C", lock).run(10, resultsInOrderWithLock),
   ];
 
   await Promise.all(promisesWithoutLock);
@@ -52,6 +52,6 @@ test("lock pool: allow limited concurrent access to resource", async () => {
   expect(resultsInOrderWithoutLock[2]).toBe("A");
 
   expect(resultsInOrderWithLock[0]).toBe("B");
-  expect(resultsInOrderWithLock[1]).toBe("A");
-  expect(resultsInOrderWithLock[2]).toBe("C");
+  expect(resultsInOrderWithLock[1]).toBe("C");
+  expect(resultsInOrderWithLock[2]).toBe("A");
 });

@@ -14,13 +14,9 @@ test("promise pool: allow limited concurrent task execution", async () => {
   const taskExecutor = new PromisePool<string>({concurrentLimit: 2});
   const resultsInOrder = new Array<string>();
 
-  await taskExecutor.runMany([
-    () => task("A",30, resultsInOrder), 
-    () => task("B",20, resultsInOrder),
-    () => task("C",10, resultsInOrder)
-  ]);
+  await taskExecutor.runMany([() => task("A", 120, resultsInOrder), () => task("B", 60, resultsInOrder), () => task("C", 10, resultsInOrder)]);
 
   expect(resultsInOrder[0]).toBe("B");
-  expect(resultsInOrder[1]).toBe("A");
-  expect(resultsInOrder[2]).toBe("C");
+  expect(resultsInOrder[1]).toBe("C");
+  expect(resultsInOrder[2]).toBe("A");
 });

@@ -12,11 +12,7 @@ function task(result: string, timeout: number): Promise<string> {
 test("promise mutex: prevent concurrent task execution", async () => {
   const taskExecutor = new PromiseMutex<string>();
 
-  const results = await taskExecutor.runMany([
-    () => task("A",90), 
-    () => task("B",20),
-    () => task("C",10)
-  ]);
+  const results = await taskExecutor.runMany([() => task("A", 120), () => task("B", 60), () => task("C", 10)]);
 
   expect(results[0]).toBe("A");
   expect(results[1]).toBe("B");
