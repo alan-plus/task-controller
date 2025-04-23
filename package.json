@@ -10,7 +10,7 @@
   "bugs": {
     "url": "https://github.com/alan-plus/pro-task/issues"
   },
-  "description": "",
+  "description": "Modern JavaScript task utility library",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -18,6 +18,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "types": "tsc --noEmit",
     "test": "jest",
     "coverage": "jest --coverage"
   },

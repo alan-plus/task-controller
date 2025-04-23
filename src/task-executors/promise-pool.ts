@@ -15,7 +15,7 @@ export class PromisePool<T> implements TaskExecutor<T> {
   //private readonly expiredQueue = new Array<TaskEntry>();
 
   constructor(options?: PromisePoolOptions) {
-    this.options = this.sanitizeOptions(options, defaultOptions);
+    this.options = this.sanitizeOptions(options);
   }
 
   public async run<T>(task: () => Promise<T>): Promise<T> {
@@ -82,12 +82,12 @@ export class PromisePool<T> implements TaskExecutor<T> {
     return nextTask;
   }
 
-  private sanitizeOptions(options: PromisePoolOptions | undefined, defaultOptions: Required<PromisePoolOptions>): Required<PromisePoolOptions> {
+  private sanitizeOptions(options: PromisePoolOptions | undefined): Required<PromisePoolOptions> {
     if (options === null || options === undefined || Array.isArray(options) || typeof options !== "object") {
       return defaultOptions;
     }
 
-    const sanitizedOptions: PromisePoolOptions = { ...defaultOptions };
+    const sanitizedOptions: any = { ...defaultOptions };
 
     for (const key in defaultOptions) {
       const typedKey = key as keyof PromisePoolOptions;

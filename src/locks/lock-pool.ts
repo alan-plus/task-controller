@@ -13,7 +13,7 @@ export class LockPool implements Lock{
   private readonly runningQueue = new Array<RunningLockEntry>();
 
   constructor(options?: PoolLockOptions){
-    this.options = this.sanitizeOptions(options, defaultOptions);
+    this.options = this.sanitizeOptions(options);
   }
 
   public async lock(): Promise<Lock> {
@@ -84,14 +84,13 @@ export class LockPool implements Lock{
     return lockTask;
   }
 
-  private sanitizeOptions(options: PoolLockOptions | undefined, 
-    defaultOptions: Required<PoolLockOptions>): Required<PoolLockOptions> {
+  private sanitizeOptions(options: PoolLockOptions | undefined): Required<PoolLockOptions> {
 
     if(options === null || options === undefined || Array.isArray(options) || typeof options !== 'object'){
       return defaultOptions;
     }
 
-    const sanitizedOptions: PoolLockOptions = {...defaultOptions};
+    const sanitizedOptions: any = { ...defaultOptions };
 
     for(const key in defaultOptions){
       const typedKey = key as keyof PoolLockOptions;
