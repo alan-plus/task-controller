@@ -1,6 +1,9 @@
+import { TryAcquireResponse } from "../locks/lock-pool";
+import { ReleaseFunction } from "../types/release-function.type";
+
 export interface Lock {
-  lock(): Promise<Lock>;
-  tryLock(): boolean;
-  unlock(): void;
+  acquire(): Promise<ReleaseFunction>;
+  tryAcquire(): TryAcquireResponse;
   locked(): boolean;
+  releaseAll(): void;
 }

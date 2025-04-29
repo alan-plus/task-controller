@@ -1,6 +1,7 @@
 import { setTimeout } from "timers/promises";
 import { LockPool } from "../../src/locks/lock-pool";
 import { Lock } from "../../src/interfaces/lock";
+import { ReleaseFunction } from "../../src/types/release-function.type";
 
 class Task {
   constructor(
@@ -10,18 +11,18 @@ class Task {
 
   public async run(timeout: number, resultsInOrder: string[]): Promise<string> {
     return new Promise<string>(async (resolve, reject) => {
+      let release: ReleaseFunction | undefined;
       try {
         if (this.lock) {
-          await this.lock.lock();
+          release = await this.lock.acquire();
         }
-
         await setTimeout(timeout, undefined);
 
         resultsInOrder.push(this.result);
         resolve(this.result);
       } finally {
-        if (this.lock) {
-          this.lock.unlock();
+        if (release) {
+          release();
         }
       }
     });
@@ -94,4 +95,51 @@ test("lock pool: invalid options", async () => {
   expect(resultsInOrder[0]).toBe("A");
   expect(resultsInOrder[1]).toBe("B");
   expect(resultsInOrder[2]).toBe("C");
+});
+
+test("lock pool: example code", async () => {
+  const lock = new LockPool({ concurrentLimit: 2 });
+  const initTimestamp = Date.now();
+
+  const results = await Promise.all([
+    new Promise<any>(async (resolve) => {
+      const release = await lock.acquire();
+      const accessToLockTimestamp = Date.now();
+      try {
+        // access the resource for 150 miliseconds
+        await setTimeout(150, undefined);
+
+        resolve({ task: "A", timeToAccessTheLock: accessToLockTimestamp - initTimestamp });
+      } finally {
+        release();
+      }
+    }),
+    new Promise<any>(async (resolve) => {
+      const release = await lock.acquire();
+      const accessToLockTimestamp = Date.now();
+      try {
+        // access the resource for 100 miliseconds
+        await setTimeout(100, undefined);
+
+        resolve({ task: "B", timeToAccessTheLock: accessToLockTimestamp - initTimestamp });
+      } finally {
+        release();
+      }
+    }),
+    new Promise<any>(async (resolve) => {
+      const release = await lock.acquire();
+      const accessToLockTimestamp = Date.now();
+      try {
+        // access the resource protected by this lock
+
+        resolve({ task: "C", timeToAccessTheLock: accessToLockTimestamp - initTimestamp });
+      } finally {
+        release();
+      }
+    }),
+  ]);
+
+  expect(results[0].timeToAccessTheLock).toBeLessThan(10);
+  expect(results[1].timeToAccessTheLock).toBeLessThan(10);
+  expect(results[2].timeToAccessTheLock).toBeGreaterThan(100);
 });

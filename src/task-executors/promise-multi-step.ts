@@ -26,4 +26,10 @@ export class PromiseMultiStep<T> implements TaskExecutor<MultiStepTask<T>> {
 
     return Promise.all(promises);
   }
+
+  public releaseAll(): void {
+    for (const lock of this.stepLocks) {
+      lock.releaseAll();
+    }
+  }
 }

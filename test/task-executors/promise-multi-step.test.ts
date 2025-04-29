@@ -4,28 +4,28 @@ import { Lock } from "../../src/interfaces/lock";
 
 function task(result: string, timeout: number, stepResultsArray: string[][], stepLock1: Lock, stepLock2: Lock, stepLock3: Lock): Promise<string> {
   return new Promise<string>(async (resolve, reject) => {
+    const release1 = await stepLock1.acquire();
     try {
-      await stepLock1.lock();
       await setTimeout(timeout, undefined);
       stepResultsArray[0]?.push(result);
     } finally {
-      stepLock1.unlock();
+      release1();
     }
 
+    const release2 = await stepLock2.acquire();
     try {
-      await stepLock2.lock();
       await setTimeout(timeout, undefined);
       stepResultsArray[1]?.push(result);
     } finally {
-      stepLock2.unlock();
+      release2();
     }
 
+    const release3 = await stepLock3.acquire();
     try {
-      await stepLock3.lock();
       await setTimeout(timeout, undefined);
       stepResultsArray[2]?.push(result);
     } finally {
-      stepLock3.unlock();
+      release3();
     }
 
     resolve(result);

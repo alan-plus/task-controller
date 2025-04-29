@@ -2,9 +2,9 @@ import { TaskExecutor } from "../interfaces/task.executor";
 import { QueueType } from "../types/queue.type";
 import { PromisePool, PromisePoolOptions } from "./promise-pool";
 
-export type PromiseMutexOptions = { queueType?: QueueType };
+export type PromiseMutexOptions = { queueType?: QueueType; releaseTimeout?: number };
 
-export class PromiseMutex<T> implements TaskExecutor<T>{
+export class PromiseMutex<T> implements TaskExecutor<T> {
   private readonly poolTaskExecutor: PromisePool<T>;
 
   constructor(options?: PromiseMutexOptions) {
@@ -21,5 +21,9 @@ export class PromiseMutex<T> implements TaskExecutor<T>{
 
   public async runMany<T>(tasks: Array<() => Promise<T>>): Promise<T[]> {
     return await this.poolTaskExecutor.runMany(tasks);
+  }
+
+  public releaseAll(): void {
+    this.poolTaskExecutor.releaseAll();
   }
 }

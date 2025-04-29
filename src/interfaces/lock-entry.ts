@@ -1,8 +1,10 @@
-import { Lock } from "./lock";
+import { ReleaseFunction } from "../types/release-function.type";
 
-export interface WaitingLockEntry extends RunningLockEntry {
-  resolve(result: Lock): void;
+export interface WaitingLockEntry {
+  resolve(result: ReleaseFunction): void;
   reject(reason?: any): void;
 }
 
-export interface RunningLockEntry {}
+export interface RunningLockEntry {
+  releaseTimeoutId?: NodeJS.Timeout;
+}

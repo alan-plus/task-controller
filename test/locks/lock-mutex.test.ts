@@ -1,6 +1,7 @@
 import { setTimeout } from "timers/promises";
 import { LockMutex } from "../../src/locks/lock-mutex";
 import { Lock } from "../../src/interfaces/lock";
+import { ReleaseFunction } from "../../src/types/release-function.type";
 
 class Task {
   constructor(
@@ -9,10 +10,11 @@ class Task {
   ) {}
 
   public async run(timeout: number, resultsInOrder?: string[]): Promise<string> {
-    return new Promise<string>(async (resolve, reject) => {
+    return new Promise<string>(async (resolve) => {
+      let release: ReleaseFunction | undefined;
       try {
         if (this.lock) {
-          await this.lock.lock();
+          release = await this.lock.acquire();
         }
 
         await setTimeout(timeout, undefined);
@@ -23,8 +25,8 @@ class Task {
 
         resolve(this.result);
       } finally {
-        if (this.lock) {
-          this.lock.unlock();
+        if (release) {
+          release();
         }
       }
     });
@@ -86,49 +88,53 @@ test("lock mutex: prevent concurrent access to resource LIFO", async () => {
 test("lock: method locked", async () => {
   const lock = new LockMutex();
 
-  await lock.lock();
+  await lock.acquire();
 
   expect(lock.locked()).toBe(true);
 });
 
-test("lock: method unlocked", async () => {
+test("lock: function release", async () => {
   const lock = new LockMutex();
 
-  await lock.lock();
-  lock.unlock();
+  const release = await lock.acquire();
+  release();
 
   expect(lock.locked()).toBe(false);
 });
 
-test("lock: method unlocked multiple times", async () => {
+test("lock: release multiple times", async () => {
   const lock = new LockMutex();
 
-  await lock.lock();
-  lock.unlock();
-  lock.unlock();
+  const release = await lock.acquire();
+  release();
+  release();
 
   expect(lock.locked()).toBe(false);
 });
 
-test("lock: method tryLock true", async () => {
+test("lock: method tryAcquire true", async () => {
   const lock = new LockMutex();
-
-  expect(lock.tryLock()).toBe(true);
+  const { acquired } = lock.tryAcquire();
+  expect(acquired).toBe(true);
 });
 
-test("lock: method tryLock false (waiting lock)", async () => {
+test("lock: method tryAcquire false (waiting lock)", async () => {
   const lock = new LockMutex();
   const promises = [new Task("A", lock).run(120), new Task("B", lock).run(60), new Task("C", lock).run(10)];
   Promise.all(promises);
 
-  expect(lock.tryLock()).toBe(false);
+  const { acquired } = lock.tryAcquire();
+
+  expect(acquired).toBe(false);
 });
 
-test("lock: method tryLock false (running lock)", async () => {
+test("lock: method tryAcquire false (running lock)", async () => {
   const lock = new LockMutex();
   const promises = [new Task("A", lock).run(120)];
   Promise.all(promises);
   await setTimeout(10, undefined);
 
-  expect(lock.tryLock()).toBe(false);
+  const { acquired } = lock.tryAcquire();
+
+  expect(acquired).toBe(false);
 });

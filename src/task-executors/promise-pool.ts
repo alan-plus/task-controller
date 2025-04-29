@@ -3,15 +3,15 @@ import { TaskEntry } from "../interfaces/task-entry";
 import { PromiseMutexOptions } from "./promise-mutex";
 import { TaskExecutor } from "../interfaces/task.executor";
 
-export type PromisePoolOptions = PromiseMutexOptions & { concurrentLimit?: number};
+export type PromisePoolOptions = PromiseMutexOptions & { concurrentLimit?: number };
 
-const defaultOptions: Required<PromisePoolOptions> = { concurrentLimit: 1, queueType: 'FIFO' };
+const defaultOptions: Required<PromisePoolOptions> = { concurrentLimit: 1, queueType: "FIFO", releaseTimeout: 0 };
 
 export class PromisePool<T> implements TaskExecutor<T> {
   private readonly options: Required<PromisePoolOptions>;
 
   private readonly waitingQueue = new Array<TaskEntry>();
-  private readonly runningQueue = new Set<TaskEntry>();
+  private readonly runningQueue = new Map<TaskEntry, ReleaseFunction>();
   //private readonly expiredQueue = new Array<TaskEntry>();
 
   constructor(options?: PromisePoolOptions) {
@@ -26,6 +26,12 @@ export class PromisePool<T> implements TaskExecutor<T> {
     const promises = tasks.map((task) => this.enqueueAndRun(task));
 
     return Promise.all(promises);
+  }
+
+  public releaseAll(): void {
+    for (const [, releaseFunction] of this.runningQueue) {
+      releaseFunction();
+    }
   }
 
   private async acquire(): Promise<ReleaseFunction> {
@@ -56,16 +62,32 @@ export class PromisePool<T> implements TaskExecutor<T> {
       return;
     }
 
-    this.runningQueue.add(nextTask);
     const releaseFunction = this.buildReleaseFunction(nextTask);
+    this.runningQueue.set(nextTask, releaseFunction);
     nextTask.resolve(releaseFunction);
   }
 
   private buildReleaseFunction(taskEntry: TaskEntry): ReleaseFunction {
-    return () => {
+    const releaseFunction: ReleaseFunction = () => {
+      if (!this.runningQueue.has(taskEntry)) {
+        return;
+      }
+
+      if (taskEntry.releaseTimeoutId) {
+        clearTimeout(taskEntry.releaseTimeoutId);
+      }
+
       this.runningQueue.delete(taskEntry);
       this.dispatchNextTask();
     };
+
+    if (this.options.releaseTimeout > 0) {
+      taskEntry.releaseTimeoutId = setTimeout(() => {
+        releaseFunction();
+      }, this.options.releaseTimeout);
+    }
+
+    return releaseFunction;
   }
 
   private getNextTaskToRun(): TaskEntry | undefined {

@@ -1,8 +1,9 @@
 import { Lock } from "../interfaces/lock";
 import { QueueType } from "../types/queue.type";
-import { LockPool, PoolLockOptions } from "./lock-pool";
+import { ReleaseFunction } from "../types/release-function.type";
+import { LockPool, PoolLockOptions, TryAcquireResponse } from "./lock-pool";
 
-export type LockOptions = { queueType?: QueueType };
+export type LockOptions = { queueType?: QueueType; releaseTimeout?: number };
 
 export class LockMutex implements Lock {
   private readonly poolLock: LockPool;
@@ -15,19 +16,19 @@ export class LockMutex implements Lock {
     this.poolLock = new LockPool({ ...options, concurrentLimit: 1 } satisfies PoolLockOptions);
   }
 
-  public async lock(): Promise<Lock> {
-    return await this.poolLock.lock();
+  public async acquire(): Promise<ReleaseFunction> {
+    return await this.poolLock.acquire();
   }
 
-  public tryLock(): boolean {
-    return this.poolLock.tryLock();
-  }
-
-  public unlock(): void {
-    this.poolLock.unlock();
+  public tryAcquire(): TryAcquireResponse {
+    return this.poolLock.tryAcquire();
   }
 
   public locked(): boolean {
     return this.poolLock.locked();
+  }
+
+  public releaseAll(): void {
+    this.poolLock.releaseAll();
   }
 }
