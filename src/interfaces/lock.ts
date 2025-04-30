@@ -1,5 +1,5 @@
 import { TryAcquireResponse } from "../locks/lock-pool";
-import { ReleaseFunction } from "../types/release-function.type";
+import { ReleaseFunction } from "./release-function";
 
 export interface Lock {
   acquire(): Promise<ReleaseFunction>;

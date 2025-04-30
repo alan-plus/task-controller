@@ -1,4 +1,4 @@
-import { ReleaseFunction } from "../types/release-function.type";
+import { ReleaseFunction } from "./release-function";
 
 export interface WaitingLockEntry {
   resolve(result: ReleaseFunction): void;

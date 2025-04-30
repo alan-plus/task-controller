@@ -1,4 +1,4 @@
-import { ReleaseFunction } from "../types/release-function.type";
+import { ReleaseFunction } from "../interfaces/release-function";
 import { TaskEntry } from "../interfaces/task-entry";
 import { PromiseMutexOptions } from "./promise-mutex";
 import { TaskExecutor } from "../interfaces/task.executor";

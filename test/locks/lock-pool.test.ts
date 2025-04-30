@@ -1,7 +1,7 @@
 import { setTimeout } from "timers/promises";
 import { LockPool } from "../../src/locks/lock-pool";
 import { Lock } from "../../src/interfaces/lock";
-import { ReleaseFunction } from "../../src/types/release-function.type";
+import { ReleaseFunction } from "../../src/interfaces/release-function";
 
 class Task {
   constructor(
