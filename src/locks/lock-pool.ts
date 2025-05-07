@@ -1,14 +1,12 @@
 import { EventEmitter } from "events";
 import { Lock } from "../interfaces/lock";
-import { RunningLockEntry, WaitingLockEntry } from "../interfaces/lock-entry";
+import { RunningLock, WaitingLock } from "../interfaces/lock-entry";
 import { ReleaseFunction } from "../interfaces/release-function";
 import { LockOptions } from "./lock-mutex";
 
-// abortSignal at timeout: send abort signal if release timeout is reached. AbortController is received when lock is acquired
-// errorHandler is not needed on lock, but is needed on taskExecutor
 export type TryAcquireResponse = { acquired: boolean; release?: ReleaseFunction };
 export type LockEvent = "error" | "lock-acquire" | "lock-release";
-export type LockErrorCode = "release-timeout-callback-error";
+export type LockErrorCode = "timeout-handler-error";
 export type LockEventError = { code: LockErrorCode; error: any };
 export type PoolLockOptions = LockOptions & { concurrentLimit?: number };
 
@@ -16,12 +14,17 @@ interface InternalReleaseFunction extends ReleaseFunction {
   (timeoutReached?: boolean): void;
 }
 
-const defaultOptions: Required<PoolLockOptions> = { concurrentLimit: 1, queueType: "FIFO", releaseTimeout: 0, releaseTimeoutCallback: () => {} };
+const defaultOptions: Required<PoolLockOptions> = {
+  concurrentLimit: 1,
+  queueType: "FIFO",
+  releaseTimeout: 0,
+  timeoutHandler: () => {},
+} satisfies PoolLockOptions;
 
 export class LockPool extends EventEmitter implements Lock {
   private readonly options: Required<PoolLockOptions>;
-  private readonly waitingQueue = new Array<WaitingLockEntry>();
-  private readonly runningQueue = new Map<RunningLockEntry, ReleaseFunction>();
+  private readonly waitingQueue = new Array<WaitingLock>();
+  private readonly runningQueue = new Map<RunningLock, ReleaseFunction>();
 
   constructor(options?: PoolLockOptions) {
     super();
@@ -38,7 +41,7 @@ export class LockPool extends EventEmitter implements Lock {
 
   public async acquire(): Promise<ReleaseFunction> {
     return new Promise<ReleaseFunction>((resolve, reject) => {
-      const lockEntry = { resolve, reject } satisfies WaitingLockEntry;
+      const lockEntry = { resolve, reject } satisfies WaitingLock;
       this.waitingQueue.push(lockEntry);
       this.dispatchNextLock();
     });
@@ -55,12 +58,12 @@ export class LockPool extends EventEmitter implements Lock {
       return { acquired: false };
     }
 
-    const releaseFunction = this.acquireLock();
+    const releaseFunction = this.start();
 
     return { acquired: true, release: releaseFunction };
   }
 
-  public locked(): boolean {
+  public isLocked(): boolean {
     const conncurrentLimitReached = this.runningQueue.size >= this.options.concurrentLimit;
     return conncurrentLimitReached;
   }
@@ -71,16 +74,16 @@ export class LockPool extends EventEmitter implements Lock {
     }
   }
 
-  private acquireLock(waitingLock?: WaitingLockEntry): ReleaseFunction {
-    const lockEntry = {} as RunningLockEntry;
-    const releaseFunction = this.buildReleaseFunction(lockEntry);
-    this.runningQueue.set(lockEntry, releaseFunction);
-    this.emit("lock-acquire", lockEntry);
+  private start(waitingLock?: WaitingLock): ReleaseFunction {
+    const runningLock = {} as RunningLock;
+    const releaseFunction = this.buildReleaseFunction(runningLock);
+    this.runningQueue.set(runningLock, releaseFunction);
+    this.emit("lock-acquire", runningLock);
 
     return releaseFunction;
   }
 
-  private buildReleaseFunction(lockEntry: RunningLockEntry): ReleaseFunction {
+  private buildReleaseFunction(lockEntry: RunningLock): ReleaseFunction {
     const releaseFunction: InternalReleaseFunction = (timeoutReached: boolean = false) => {
       if (!this.runningQueue.has(lockEntry)) {
         return;
@@ -98,9 +101,9 @@ export class LockPool extends EventEmitter implements Lock {
     if (this.options.releaseTimeout > 0) {
       lockEntry.releaseTimeoutId = setTimeout(() => {
         try {
-          this.options.releaseTimeoutCallback();
+          this.options.timeoutHandler();
         } catch (error) {
-          this.emit("error", { code: "release-timeout-callback-error", error } as LockEventError);
+          this.emit("error", { code: "timeout-handler-error", error } as LockEventError);
         }
 
         releaseFunction(true);
@@ -111,7 +114,7 @@ export class LockPool extends EventEmitter implements Lock {
   }
 
   private dispatchNextLock(): void {
-    if (this.locked()) {
+    if (this.isLocked()) {
       return;
     }
 
@@ -120,23 +123,23 @@ export class LockPool extends EventEmitter implements Lock {
       return;
     }
 
-    const releaseFunction = this.acquireLock(nextLock);
+    const releaseFunction = this.start(nextLock);
 
     nextLock.resolve(releaseFunction);
   }
 
-  private getNextLockToRun(): WaitingLockEntry | undefined {
-    let lockTask: WaitingLockEntry | undefined;
+  private getNextLockToRun(): WaitingLock | undefined {
+    let lockEntry: WaitingLock | undefined;
     switch (this.options.queueType) {
       case "FIFO":
-        lockTask = this.waitingQueue.shift();
+        lockEntry = this.waitingQueue.shift();
         break;
       case "LIFO":
-        lockTask = this.waitingQueue.pop();
+        lockEntry = this.waitingQueue.pop();
         break;
     }
 
-    return lockTask;
+    return lockEntry;
   }
 
   private sanitizeOptions(options: PoolLockOptions | undefined): Required<PoolLockOptions> {

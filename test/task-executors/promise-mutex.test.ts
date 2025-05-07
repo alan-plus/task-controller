@@ -24,7 +24,8 @@ test("promise mutex: prevent concurrent task execution (default options)", async
 });
 
 test("promise mutex: prevent concurrent task execution FIFO", async () => {
-  const taskExecutor = new PromiseMutex<string>({ queueType: "FIFO" });
+  const abortController = new AbortController();
+  const taskExecutor = new PromiseMutex<string>({ queueType: "FIFO", signal: abortController.signal });
   const resultsInOrder = new Array<string>();
 
   await taskExecutor.runMany([() => task("A", 120, resultsInOrder), () => task("B", 60, resultsInOrder), () => task("C", 10, resultsInOrder)]);

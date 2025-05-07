@@ -1,7 +1,8 @@
 import { QueueType } from "../types/queue.type";
+import { TimeoutHandler } from "../types/timeout-handler.type";
 import { LockPool, PoolLockOptions } from "./lock-pool";
 
-export type LockOptions = { queueType?: QueueType; releaseTimeout?: number; releaseTimeoutCallback?: () => void };
+export type LockOptions = { queueType?: QueueType; releaseTimeout?: number; timeoutHandler?: TimeoutHandler };
 
 export class LockMutex extends LockPool {
   constructor(options?: LockOptions) {
