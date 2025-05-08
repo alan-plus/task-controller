@@ -2,6 +2,7 @@ import { setTimeout } from "timers/promises";
 import { LockMutex } from "../../src/locks/lock-mutex";
 import { Lock } from "../../src/interfaces/lock";
 import { ReleaseFunction } from "../../src/interfaces/release-function";
+import { LockEventError } from "../../src/locks/lock-pool";
 
 class Task {
   constructor(
@@ -64,7 +65,11 @@ test("lock mutex: prevent concurrent access to resource (default options)", asyn
 test("lock mutex: prevent concurrent access to resource FIFO", async () => {
   const lock = new LockMutex({ queueType: "FIFO" });
   const resultsInOrder = new Array<string>();
-  const promises = [new Task("A", lock).run(120, resultsInOrder), new Task("B", lock).run(60, resultsInOrder), new Task("C", lock).run(10, resultsInOrder)];
+  const promises = [
+    new Task("A", lock).run(120, resultsInOrder),
+    new Task("B", lock).run(60, resultsInOrder),
+    new Task("C", lock).run(10, resultsInOrder),
+  ];
 
   await Promise.all(promises);
 
@@ -76,7 +81,11 @@ test("lock mutex: prevent concurrent access to resource FIFO", async () => {
 test("lock mutex: prevent concurrent access to resource LIFO", async () => {
   const lock = new LockMutex({ queueType: "LIFO" });
   const resultsInOrder = new Array<string>();
-  const promises = [new Task("A", lock).run(120, resultsInOrder), new Task("B", lock).run(60, resultsInOrder), new Task("C", lock).run(10, resultsInOrder)];
+  const promises = [
+    new Task("A", lock).run(120, resultsInOrder),
+    new Task("B", lock).run(60, resultsInOrder),
+    new Task("C", lock).run(10, resultsInOrder),
+  ];
 
   await Promise.all(promises);
 
@@ -90,7 +99,7 @@ test("lock: method locked true", async () => {
 
   await lock.acquire();
 
-  expect(lock.isLocked()).toBe(true);
+  expect(lock.isLockLimitReached()).toBe(true);
 });
 
 test("lock: method locked true", async () => {
@@ -99,7 +108,7 @@ test("lock: method locked true", async () => {
   const release = await lock.acquire();
   release();
 
-  expect(lock.isLocked()).toBe(false);
+  expect(lock.isLockLimitReached()).toBe(false);
 });
 
 test("lock: release multiple times", async () => {
@@ -109,7 +118,7 @@ test("lock: release multiple times", async () => {
   release();
   release();
 
-  expect(lock.isLocked()).toBe(false);
+  expect(lock.isLockLimitReached()).toBe(false);
 });
 
 test("lock: method tryAcquire true", async () => {
@@ -176,4 +185,80 @@ test("lock: event listener off", async () => {
   await lock.acquire();
 
   expect(lockAcquiredEventTriggered).toBe(false);
+});
+
+test("lock: releaseTimeout not reached", async () => {
+  const lock = new LockMutex({ releaseTimeout: 200 });
+  lock.acquire();
+
+  const isLockedBeforeDelay = lock.isLockLimitReached();
+  await setTimeout(100, undefined);
+  const isLockedAfterDelay = lock.isLockLimitReached();
+
+  expect(isLockedBeforeDelay).toBe(true);
+  expect(isLockedAfterDelay).toBe(true);
+});
+
+test("lock: releaseTimeout reached", async () => {
+  const lock = new LockMutex({ releaseTimeout: 50 });
+  lock.acquire();
+
+  const isLockedBeforeDelay = lock.isLockLimitReached();
+  await setTimeout(100, undefined);
+  const isLockedAfterDelay = lock.isLockLimitReached();
+
+  expect(isLockedBeforeDelay).toBe(true);
+  expect(isLockedAfterDelay).toBe(false);
+});
+
+test("lock: timeoutHandler triggered", async () => {
+  let timeoutHandlerTriggered = false;
+  const timeoutHandler = () => {
+    timeoutHandlerTriggered = true;
+  };
+
+  const lock = new LockMutex({ releaseTimeout: 50, releaseTimeoutHandler: timeoutHandler });
+  lock.acquire();
+
+  await setTimeout(100, undefined);
+
+  expect(timeoutHandlerTriggered).toBe(true);
+});
+
+test("lock: timeoutHandler not triggered", async () => {
+  let timeoutHandlerTriggered = false;
+  const releaseTimeoutHandler = () => {
+    timeoutHandlerTriggered = true;
+  };
+
+  const lock = new LockMutex({ releaseTimeout: 200, releaseTimeoutHandler });
+  lock.acquire();
+
+  await setTimeout(100, undefined);
+
+  expect(timeoutHandlerTriggered).toBe(false);
+});
+
+test("lock: listen 'error' event (release-timeout-handler-failure)", async () => {
+  const releaseTimeoutHandler = () => {
+    throw Error("unexpected error on timeoutHandler");
+  };
+
+  const lock = new LockMutex({ releaseTimeout: 50, releaseTimeoutHandler });
+  let errorEventTriggered = false;
+  let lockEventError: LockEventError | undefined;
+  lock.on("error", (error: LockEventError) => {
+    errorEventTriggered = true;
+    lockEventError = error;
+  });
+
+  await lock.acquire();
+  await setTimeout(100, undefined);
+
+  expect(errorEventTriggered).toBe(true);
+  if (lockEventError !== undefined) {
+    expect(lockEventError.code).toBe("release-timeout-handler-failure");
+  } else {
+    fail("lockEventError missed");
+  }
 });

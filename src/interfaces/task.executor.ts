@@ -7,6 +7,7 @@ export interface TaskExecutor<T> {
   tryRun<T>(task: () => Promise<T>, options?: TaskOptions): TryRunResponse<T>;
   releaseRunningTasks(): void;
   flushPendingTasks(): void;
-  on(event: TaskEvent, listener: () => void): TaskExecutor<T>;
-  off(event: TaskEvent, listener: () => void): TaskExecutor<T>;
+  on(event: TaskEvent, listener: (...args: any[]) => void): TaskExecutor<T>;
+  off(event: TaskEvent, listener: (...args: any[]) => void): TaskExecutor<T>;
+  isRunningLimitReached(): boolean;
 }

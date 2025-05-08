@@ -37,12 +37,12 @@ export class PromisePool<T> implements TaskExecutor<T> {
     this.options = this.sanitizeOptions(options);
   }
 
-  public on(event: TaskEvent, listener: () => void): this {
+  public on(event: TaskEvent, listener: (...args: any[]) => void): this {
     this.internalEmitter.on(event, listener);
     return this;
   }
 
-  public off(event: TaskEvent, listener: () => void): this {
+  public off(event: TaskEvent, listener: (...args: any[]) => void): this {
     this.internalEmitter.off(event, listener);
     return this;
   }
@@ -100,6 +100,11 @@ export class PromisePool<T> implements TaskExecutor<T> {
     }
   }
 
+  public isRunningLimitReached(): boolean {
+    const conncurrentLimitReached = this.runningQueue.size >= this.options.concurrentLimit;
+    return conncurrentLimitReached;
+  }
+
   private emit(event: TaskEvent, ...args: any[]): boolean {
     return this.internalEmitter.emit(event, ...args);
   }
@@ -155,8 +160,7 @@ export class PromisePool<T> implements TaskExecutor<T> {
   }
 
   private dispatchNextTask(): void {
-    const conncurrentLimitReached = this.runningQueue.size >= this.options.concurrentLimit;
-    if (conncurrentLimitReached) {
+    if (this.isRunningLimitReached()) {
       return;
     }
 

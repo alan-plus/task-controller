@@ -5,6 +5,6 @@ export interface WaitingLock {
   reject(reason?: any): void;
 }
 
-export interface RunningLock {
+export interface AcquiredLock {
   releaseTimeoutId?: NodeJS.Timeout;
 }

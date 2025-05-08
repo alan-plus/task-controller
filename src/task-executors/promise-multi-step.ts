@@ -28,7 +28,16 @@ export class PromiseMultiStep<T> {
 
   public releaseAll(): void {
     for (const lock of this.stepLocks) {
-      lock.releaseRunningLocks();
+      lock.releaseAcquiredLocks();
     }
+  }
+
+  public isStepLockLimitReached(stepIndex: number): boolean{
+    const stepLock = this.stepLocks[stepIndex];
+    if(!stepLock){
+      return false;
+    }
+
+    return stepLock.isLockLimitReached();
   }
 }

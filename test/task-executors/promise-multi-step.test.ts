@@ -2,12 +2,21 @@ import { setTimeout } from "timers/promises";
 import { PromiseMultiStep } from "../../src/task-executors/promise-multi-step";
 import { Lock } from "../../src/interfaces/lock";
 
-function task(result: string, timeout: number, stepResultsArray: string[][], stepLock1: Lock, stepLock2: Lock, stepLock3: Lock): Promise<string> {
+function task(
+  result: string,
+  timeout: number,
+  stepResultsArray: string[][] | null,
+  stepLock1: Lock,
+  stepLock2: Lock,
+  stepLock3: Lock
+): Promise<string> {
   return new Promise<string>(async (resolve, reject) => {
     const release1 = await stepLock1.acquire();
     try {
       await setTimeout(timeout, undefined);
-      stepResultsArray[0]?.push(result);
+      if (stepResultsArray) {
+        stepResultsArray[0]?.push(result);
+      }
     } finally {
       release1();
     }
@@ -15,7 +24,9 @@ function task(result: string, timeout: number, stepResultsArray: string[][], ste
     const release2 = await stepLock2.acquire();
     try {
       await setTimeout(timeout, undefined);
-      stepResultsArray[1]?.push(result);
+      if (stepResultsArray) {
+        stepResultsArray[1]?.push(result);
+      }
     } finally {
       release2();
     }
@@ -23,7 +34,9 @@ function task(result: string, timeout: number, stepResultsArray: string[][], ste
     const release3 = await stepLock3.acquire();
     try {
       await setTimeout(timeout, undefined);
-      stepResultsArray[2]?.push(result);
+      if (stepResultsArray) {
+        stepResultsArray[2]?.push(result);
+      }
     } finally {
       release3();
     }
@@ -71,7 +84,9 @@ test("promise multi step: method run", async () => {
   stepResultsArray.push(resultsStep2);
   stepResultsArray.push(resultsStep3);
 
-  taskExecutor.run((stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) => task("A", 140, stepResultsArray, stepLock1, stepLock2, stepLock3));
+  taskExecutor.run((stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) =>
+    task("A", 140, stepResultsArray, stepLock1, stepLock2, stepLock3)
+  );
   taskExecutor.run((stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) => task("B", 40, stepResultsArray, stepLock1, stepLock2, stepLock3));
   taskExecutor.run((stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) => task("C", 5, stepResultsArray, stepLock1, stepLock2, stepLock3));
 
@@ -88,4 +103,40 @@ test("promise multi step: method run", async () => {
   expect(resultsStep3[0]).toBe("C");
   expect(resultsStep3[1]).toBe("B");
   expect(resultsStep3[2]).toBe("A");
+});
+
+test("promise multi step: releaseAll", async () => {
+  const taskExecutor = new PromiseMultiStep<string>({ stepConcurrentLimits: [1, 1, 1] });
+
+  taskExecutor.run((stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) => task("A", 50, null, stepLock1, stepLock2, stepLock3));
+  taskExecutor.run((stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) => task("B", 50, null, stepLock1, stepLock2, stepLock3));
+  taskExecutor.run((stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) => task("C", 50, null, stepLock1, stepLock2, stepLock3));
+
+  await setTimeout(145, undefined);
+
+  const step1LockLimitReachedBeforeRelease = taskExecutor.isStepLockLimitReached(0);
+  const step2LockLimitReachedBeforeRelease = taskExecutor.isStepLockLimitReached(1);
+  const step3LockLimitReachedBeforeRelease = taskExecutor.isStepLockLimitReached(2);
+
+  taskExecutor.releaseAll();
+
+  const step1LockLimitReachedAfterRelease = taskExecutor.isStepLockLimitReached(0);
+  const step2LockLimitReachedAfterRelease = taskExecutor.isStepLockLimitReached(1);
+  const step3LockLimitReachedAfterRelease = taskExecutor.isStepLockLimitReached(2);
+
+  expect(step1LockLimitReachedBeforeRelease).toBe(true);
+  expect(step2LockLimitReachedBeforeRelease).toBe(true);
+  expect(step3LockLimitReachedBeforeRelease).toBe(true);
+
+  expect(step1LockLimitReachedAfterRelease).toBe(false);
+  expect(step2LockLimitReachedAfterRelease).toBe(false);
+  expect(step3LockLimitReachedAfterRelease).toBe(false);
+});
+
+test("promise multi step: isStepLockLimitReached (not exist step)", async () => {
+  const taskExecutor = new PromiseMultiStep<string>({ stepConcurrentLimits: [1, 1, 1] });
+
+  const notExistStepLockLimitReached = taskExecutor.isStepLockLimitReached(4);
+
+  expect(notExistStepLockLimitReached).toBe(false);
 });

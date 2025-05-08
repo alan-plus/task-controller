@@ -1,12 +1,12 @@
 import { EventEmitter } from "events";
 import { Lock } from "../interfaces/lock";
-import { RunningLock, WaitingLock } from "../interfaces/lock-entry";
+import { AcquiredLock, WaitingLock } from "../interfaces/lock-entry";
 import { ReleaseFunction } from "../interfaces/release-function";
 import { LockOptions } from "./lock-mutex";
 
 export type TryAcquireResponse = { acquired: boolean; release?: ReleaseFunction };
 export type LockEvent = "error" | "lock-acquired" | "lock-released";
-export type LockErrorCode = "timeout-handler-error";
+export type LockErrorCode = "release-timeout-handler-failure";
 export type LockEventError = { code: LockErrorCode; error: any };
 export type PoolLockOptions = LockOptions & { concurrentLimit?: number };
 
@@ -18,25 +18,25 @@ const defaultOptions: Required<PoolLockOptions> = {
   concurrentLimit: 1,
   queueType: "FIFO",
   releaseTimeout: 0,
-  timeoutHandler: () => {},
+  releaseTimeoutHandler: () => {},
 } satisfies PoolLockOptions;
 
 export class LockPool implements Lock {
   private readonly options: Required<PoolLockOptions>;
   private readonly waitingQueue = new Array<WaitingLock>();
-  private readonly runningQueue = new Map<RunningLock, ReleaseFunction>();
+  private readonly acquiredQueue = new Map<AcquiredLock, ReleaseFunction>();
   private readonly internalEmitter = new EventEmitter();
 
   constructor(options?: PoolLockOptions) {
     this.options = this.sanitizeOptions(options);
   }
 
-  public on(event: LockEvent, listener: () => void): this {
+  public on(event: LockEvent, listener: (...args: any[]) => void): this {
     this.internalEmitter.on(event, listener);
     return this;
   }
 
-  public off(event: LockEvent, listener: () => void): this {
+  public off(event: LockEvent, listener: (...args: any[]) => void): this {
     this.internalEmitter.off(event, listener);
     return this;
   }
@@ -55,7 +55,7 @@ export class LockPool implements Lock {
       return { acquired: false };
     }
 
-    const conncurrentLimitReached = this.runningQueue.size >= this.options.concurrentLimit;
+    const conncurrentLimitReached = this.acquiredQueue.size >= this.options.concurrentLimit;
     if (conncurrentLimitReached) {
       return { acquired: false };
     }
@@ -65,18 +65,18 @@ export class LockPool implements Lock {
     return { acquired: true, release: releaseFunction };
   }
 
-  public isLocked(): boolean {
-    const conncurrentLimitReached = this.runningQueue.size >= this.options.concurrentLimit;
+  public isLockLimitReached(): boolean {
+    const conncurrentLimitReached = this.acquiredQueue.size >= this.options.concurrentLimit;
     return conncurrentLimitReached;
   }
 
-  public releaseRunningLocks(): void {
-    if (!this.runningQueue.size) {
+  public releaseAcquiredLocks(): void {
+    if (!this.acquiredQueue.size) {
       return;
     }
 
-    const runningQueueCopy = [...this.runningQueue];
-    for (const [, releaseFunction] of runningQueueCopy) {
+    const acquiredQueueCopy = [...this.acquiredQueue];
+    for (const [, releaseFunction] of acquiredQueueCopy) {
       releaseFunction();
     }
   }
@@ -86,17 +86,17 @@ export class LockPool implements Lock {
   }
 
   private start(waitingLock?: WaitingLock): ReleaseFunction {
-    const runningLock = {} as RunningLock;
-    const releaseFunction = this.buildReleaseFunction(runningLock);
-    this.runningQueue.set(runningLock, releaseFunction);
-    this.emit("lock-acquired", runningLock);
+    const acquiredLock = {} as AcquiredLock;
+    const releaseFunction = this.buildReleaseFunction(acquiredLock);
+    this.acquiredQueue.set(acquiredLock, releaseFunction);
+    this.emit("lock-acquired", acquiredLock);
 
     return releaseFunction;
   }
 
-  private buildReleaseFunction(lockEntry: RunningLock): ReleaseFunction {
+  private buildReleaseFunction(lockEntry: AcquiredLock): ReleaseFunction {
     const releaseFunction: InternalReleaseFunction = (timeoutReached: boolean = false) => {
-      if (!this.runningQueue.has(lockEntry)) {
+      if (!this.acquiredQueue.has(lockEntry)) {
         return;
       }
 
@@ -104,7 +104,7 @@ export class LockPool implements Lock {
         clearTimeout(lockEntry.releaseTimeoutId);
       }
 
-      this.runningQueue.delete(lockEntry);
+      this.acquiredQueue.delete(lockEntry);
       this.emit("lock-released", lockEntry, timeoutReached);
       this.dispatchNextLock();
     };
@@ -112,9 +112,9 @@ export class LockPool implements Lock {
     if (this.options.releaseTimeout > 0) {
       lockEntry.releaseTimeoutId = setTimeout(() => {
         try {
-          this.options.timeoutHandler();
+          this.options.releaseTimeoutHandler();
         } catch (error) {
-          this.emit("error", { code: "timeout-handler-error", error } as LockEventError);
+          this.emit("error", { code: "release-timeout-handler-failure", error } as LockEventError);
         }
 
         releaseFunction(true);
@@ -125,7 +125,7 @@ export class LockPool implements Lock {
   }
 
   private dispatchNextLock(): void {
-    if (this.isLocked()) {
+    if (this.isLockLimitReached()) {
       return;
     }
 
