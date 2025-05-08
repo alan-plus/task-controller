@@ -85,21 +85,21 @@ test("lock mutex: prevent concurrent access to resource LIFO", async () => {
   expect(resultsInOrder[2]).toBe("B");
 });
 
-test("lock: method locked", async () => {
+test("lock: method locked true", async () => {
   const lock = new LockMutex();
 
   await lock.acquire();
 
-  expect(lock.locked()).toBe(true);
+  expect(lock.isLocked()).toBe(true);
 });
 
-test("lock: function release", async () => {
+test("lock: method locked true", async () => {
   const lock = new LockMutex();
 
   const release = await lock.acquire();
   release();
 
-  expect(lock.locked()).toBe(false);
+  expect(lock.isLocked()).toBe(false);
 });
 
 test("lock: release multiple times", async () => {
@@ -109,7 +109,7 @@ test("lock: release multiple times", async () => {
   release();
   release();
 
-  expect(lock.locked()).toBe(false);
+  expect(lock.isLocked()).toBe(false);
 });
 
 test("lock: method tryAcquire true", async () => {
@@ -137,4 +137,43 @@ test("lock: method tryAcquire false (running lock)", async () => {
   const { acquired } = lock.tryAcquire();
 
   expect(acquired).toBe(false);
+});
+
+test("lock: listen 'lock-acquired' event", async () => {
+  const lock = new LockMutex();
+  let lockAcquiredEventTriggered = false;
+  lock.on("lock-acquired", () => {
+    lockAcquiredEventTriggered = true;
+  });
+
+  await lock.acquire();
+
+  expect(lockAcquiredEventTriggered).toBe(true);
+});
+
+test("lock: listen 'lock-released' event", async () => {
+  const lock = new LockMutex();
+  let lockReleasedEventTriggered = false;
+  lock.on("lock-released", () => {
+    lockReleasedEventTriggered = true;
+  });
+
+  const release = await lock.acquire();
+  release();
+
+  expect(lockReleasedEventTriggered).toBe(true);
+});
+
+test("lock: event listener off", async () => {
+  const lock = new LockMutex();
+  let lockAcquiredEventTriggered = false;
+  const lockAcquiredListener = () => {
+    lockAcquiredEventTriggered = true;
+  };
+  lock.on("lock-acquired", lockAcquiredListener);
+  lock.off("lock-acquired", lockAcquiredListener);
+
+  await lock.acquire();
+
+  expect(lockAcquiredEventTriggered).toBe(false);
 });

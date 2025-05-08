@@ -143,3 +143,30 @@ test("lock pool: example code", async () => {
   expect(results[1].timeToAccessTheLock).toBeLessThan(10);
   expect(results[2].timeToAccessTheLock).toBeGreaterThan(100);
 });
+
+test("lock: releaseAll method (concurrent 3, running 3, waiting: 0)", async () => {
+  const lock = new LockPool({ concurrentLimit: 3 });
+  lock.acquire();
+  lock.acquire();
+  lock.acquire();
+
+  const isLockedBeforeReleaseAll = lock.isLocked();
+  lock.releaseRunningLocks();
+  const isLockedAfterReleaseAll = lock.isLocked();
+
+  expect(isLockedBeforeReleaseAll).toBe(true);
+  expect(isLockedAfterReleaseAll).toBe(false);
+});
+
+test("lock: releaseAll method (concurrent 1, running 1, waiting: 1)", async () => {
+  const lock = new LockPool({ concurrentLimit: 1 });
+  lock.acquire();
+  lock.acquire();
+
+  const isLockedBeforeReleaseAll = lock.isLocked();
+  lock.releaseRunningLocks();
+  const isLockedAfterReleaseAll = lock.isLocked();
+
+  expect(isLockedBeforeReleaseAll).toBe(true);
+  expect(isLockedAfterReleaseAll).toBe(true);
+});

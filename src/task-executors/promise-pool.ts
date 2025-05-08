@@ -26,24 +26,25 @@ const defaultOptions: Required<PromisePoolOptions> = {
   signal: { aborted: false } as AbortSignal,
 } satisfies PromisePoolOptions;
 
-export class PromisePool<T> extends EventEmitter implements TaskExecutor<T> {
+export class PromisePool<T> implements TaskExecutor<T> {
   private readonly options: Required<PromisePoolOptions>;
-
   private readonly waitingQueue = new Array<WaitingTask>();
   private readonly runningQueue = new Map<RunningTask, TaskExecutorReleaseFunction>();
   private readonly expiredQueue = new Set<RunningTask>();
+  private readonly internalEmitter = new EventEmitter();
 
   constructor(options?: PromisePoolOptions) {
-    super();
     this.options = this.sanitizeOptions(options);
   }
 
-  public override on(event: TaskEvent, listener: () => void): this {
-    return super.on(event, listener);
+  public on(event: TaskEvent, listener: () => void): this {
+    this.internalEmitter.on(event, listener);
+    return this;
   }
 
-  public override emit(event: TaskEvent, ...args: any[]): boolean {
-    return super.emit(event, ...args);
+  public off(event: TaskEvent, listener: () => void): this {
+    this.internalEmitter.off(event, listener);
+    return this;
   }
 
   public async run<T>(task: () => Promise<T>, options?: TaskOptions): Promise<PromiseSettledResult<T>> {
@@ -70,8 +71,13 @@ export class PromisePool<T> extends EventEmitter implements TaskExecutor<T> {
     return { acquired: true, run: this.enqueueAndRun(task, this.sanitizeTaskOptions(options)) };
   }
 
-  public releaseAll(): void {
-    for (const [, releaseFunction] of this.runningQueue) {
+  public releaseRunningTasks(): void {
+    if (!this.runningQueue.size) {
+      return;
+    }
+
+    const runningQueueCopy = [...this.runningQueue];
+    for (const [, releaseFunction] of runningQueueCopy) {
       releaseFunction("forced");
     }
   }
@@ -92,6 +98,10 @@ export class PromisePool<T> extends EventEmitter implements TaskExecutor<T> {
         clearTimeout(taskEntry.waitingTimeoutId);
       }
     }
+  }
+
+  private emit(event: TaskEvent, ...args: any[]): boolean {
+    return this.internalEmitter.emit(event, ...args);
   }
 
   private async acquire(options?: TaskOptions): Promise<TaskExecutorReleaseFunction> {
