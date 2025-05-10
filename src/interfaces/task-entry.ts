@@ -2,6 +2,7 @@ import { AcquireResponse, DiscardReason, ReleaseBeforeFinishReason } from "../ta
 import { TaskOptions } from "../types/promise-options.type";
 
 export interface TaskEntry {
+  arg?: any | undefined;
   options?: TaskOptions | undefined;
   releaseReason?: ReleaseBeforeFinishReason;
   discardReason?: DiscardReason;

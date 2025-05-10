@@ -1,12 +1,12 @@
 import { ErrorHandler } from "../task-executors/promise-mutex";
 import { QueueType } from "./queue.type";
-import { TimeoutHandler } from "./timeout-handler.type";
+import { TaskTimeoutHandler } from "./task-timeout-handler.type";
 
 export type TaskOptions = {
   releaseTimeout?: number;
-  releaseTimeoutHandler?: TimeoutHandler;
+  releaseTimeoutHandler?: TaskTimeoutHandler;
   waitingTimeout?: number;
-  waitingTimeoutHandler?: TimeoutHandler;
+  waitingTimeoutHandler?: TaskTimeoutHandler;
   errorHandler?: ErrorHandler;
   signal?: AbortSignal;
 };

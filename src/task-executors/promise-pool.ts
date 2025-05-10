@@ -3,7 +3,7 @@ import { TaskExecutor } from "../interfaces/task.executor";
 import { EventEmitter } from "events";
 import { PromisePoolOptions, TaskOptions } from "../types/promise-options.type";
 
-export type TryRunResponse<T> = { acquired: boolean; run?: Promise<PromiseSettledResult<T>> };
+export type TryRunResponse<T> = { available: true; run: () => Promise<PromiseSettledResult<T>> } | { available: false; run?: undefined };
 export type TaskEvent = "error" | "task-started" | "task-finished" | "task-failure" | "task-released-before-finished" | "task-discarded";
 export type TaskErrorCode = "waiting-timeout-handler-failure" | "release-timeout-handler-failure" | "error-handler-failure";
 export type TaskEventError = { code: TaskErrorCode; error: any };
@@ -52,28 +52,31 @@ export class PromisePool<T> implements TaskExecutor<T> {
     return this;
   }
 
-  public async run<T>(task: () => Promise<T>, options?: TaskOptions): Promise<PromiseSettledResult<T>> {
-    return await this.enqueueAndRun(task, this.sanitizeTaskOptions(options));
+  public async run<T>(task: (arg?: any) => Promise<T>, arg?: any, options?: TaskOptions): Promise<PromiseSettledResult<T>> {
+    return await this.enqueueAndRun(task, arg, this.sanitizeTaskOptions(options));
   }
 
-  public async runMany<T>(tasks: Array<() => Promise<T>>, options?: TaskOptions): Promise<PromiseSettledResult<T>[]> {
-    const promises = tasks.map((task) => this.enqueueAndRun(task, this.sanitizeTaskOptions(options)));
+  public async runMany<T>(tasks: Array<() => Promise<T>>, args?: any[], options?: TaskOptions): Promise<PromiseSettledResult<T>[]> {
+    const promises = tasks.map((task, index) => {
+      const arg = args?.length ? args[index] : undefined;
+      return this.enqueueAndRun(task, arg ?? undefined, this.sanitizeTaskOptions(options));
+    });
 
     return Promise.all(promises);
   }
 
-  public tryRun<T>(task: () => Promise<T>, options?: TaskOptions): TryRunResponse<T> {
+  public tryRun<T>(task: (arg?: any) => Promise<T>, arg?: any, options?: TaskOptions): TryRunResponse<T> {
     const someOneIsWaitingTheLock = this.waitingQueue.length > 0;
     if (someOneIsWaitingTheLock) {
-      return { acquired: false };
+      return { available: false };
     }
 
     const conncurrentLimitReached = this.runningQueue.size >= this.options.concurrentLimit;
     if (conncurrentLimitReached) {
-      return { acquired: false };
+      return { available: false };
     }
 
-    return { acquired: true, run: this.enqueueAndRun(task, this.sanitizeTaskOptions(options)) };
+    return { available: true, run: () => this.enqueueAndRun(task, arg, this.sanitizeTaskOptions(options)) };
   }
 
   public releaseRunningTasks(): void {
@@ -115,7 +118,7 @@ export class PromisePool<T> implements TaskExecutor<T> {
       return;
     }
 
-    if (!Number.isNaN(newConcurrentLimit)) {
+    if (!Number.isInteger(newConcurrentLimit)) {
       return;
     }
 
@@ -130,13 +133,25 @@ export class PromisePool<T> implements TaskExecutor<T> {
     }
   }
 
+  public waitingTasks(): number {
+    return this.waitingQueue.length;
+  }
+
+  public runningTasks(): number {
+    return this.runningQueue.size;
+  }
+
+  public expiredTasks(): number {
+    return this.expiredQueue.size;
+  }
+
   private emit(event: TaskEvent, ...args: any[]): boolean {
     return this.internalEmitter.emit(event, ...args);
   }
 
-  private async acquire(options?: TaskOptions): Promise<AcquireResponse> {
+  private async acquire(arg?: any, options?: TaskOptions): Promise<AcquireResponse> {
     return new Promise<AcquireResponse>((resolve, reject) => {
-      const taskEntry: WaitingTask = { resolve, reject, options } satisfies WaitingTask;
+      const taskEntry: WaitingTask = { resolve, reject, arg, options } satisfies WaitingTask;
       this.waitingQueue.push(taskEntry);
 
       const waitingTimeout = taskEntry.options?.waitingTimeout ?? this.options.waitingTimeout;
@@ -151,7 +166,7 @@ export class PromisePool<T> implements TaskExecutor<T> {
 
           try {
             const timeoutHandler = taskEntry.options?.waitingTimeoutHandler ?? this.options.waitingTimeoutHandler;
-            timeoutHandler();
+            timeoutHandler(taskEntry);
           } catch (error) {
             this.emit("error", taskEntry, { code: "waiting-timeout-handler-failure", error } as TaskEventError);
           }
@@ -162,10 +177,10 @@ export class PromisePool<T> implements TaskExecutor<T> {
     });
   }
 
-  private async enqueueAndRun<T>(task: () => Promise<T>, options?: TaskOptions): Promise<PromiseSettledResult<T>> {
-    const { release, taskEntry } = await this.acquire(options);
+  private async enqueueAndRun<T>(task: (arg?: any) => Promise<T>, arg?: any, options?: TaskOptions): Promise<PromiseSettledResult<T>> {
+    const { release, taskEntry } = await this.acquire(arg, options);
     try {
-      const value = await task();
+      const value = await task(taskEntry.arg);
 
       return { status: "fulfilled", value } as PromiseSettledResult<T>;
     } catch (error) {
@@ -173,7 +188,7 @@ export class PromisePool<T> implements TaskExecutor<T> {
 
       try {
         const errorHandler = options?.errorHandler ?? this.options.errorHandler;
-        errorHandler(error);
+        errorHandler(taskEntry, error);
       } catch (errorOnErrorHandler) {
         this.emit("error", taskEntry, { code: "error-handler-failure", error: errorOnErrorHandler } as TaskEventError);
       }
@@ -200,7 +215,7 @@ export class PromisePool<T> implements TaskExecutor<T> {
   }
 
   private start(waitingTask: TaskEntry): TaskExecutorReleaseFunction {
-    const runningTask = { timeoutReached: false, options: waitingTask.options } as RunningTask;
+    const runningTask = { timeoutReached: false, arg: waitingTask.arg, options: waitingTask.options } as RunningTask;
     const releaseFunction = this.buildReleaseFunction(runningTask);
     this.runningQueue.set(runningTask, releaseFunction);
     this.emit("task-started", runningTask);
@@ -246,7 +261,7 @@ export class PromisePool<T> implements TaskExecutor<T> {
 
         try {
           const timeoutHandler = taskEntry.options?.releaseTimeoutHandler ?? this.options.releaseTimeoutHandler;
-          timeoutHandler();
+          timeoutHandler(taskEntry);
         } catch (error) {
           this.emit("error", taskEntry, { code: "release-timeout-handler-failure", error } as TaskEventError);
         }
@@ -317,6 +332,16 @@ export class PromisePool<T> implements TaskExecutor<T> {
   private sanitizeOptions(options: PromisePoolOptions | undefined): Required<PromisePoolOptions> {
     if (options === null || options === undefined || Array.isArray(options) || typeof options !== "object") {
       return defaultOptions;
+    }
+
+    if (options.concurrentLimit !== undefined && options.concurrentLimit !== null && typeof options.concurrentLimit === "number") {
+      if (!Number.isFinite(options.concurrentLimit)) {
+        delete options.concurrentLimit;
+      } else if (Number.isNaN(options.concurrentLimit)) {
+        delete options.concurrentLimit;
+      } else if (!Number.isInteger(options.concurrentLimit)) {
+        options.concurrentLimit = Math.round(options.concurrentLimit);
+      }
     }
 
     const sanitizedOptions: any = { ...defaultOptions };

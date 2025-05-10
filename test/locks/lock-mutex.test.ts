@@ -211,7 +211,7 @@ test("lock: releaseTimeout reached", async () => {
   expect(isLockedAfterDelay).toBe(false);
 });
 
-test("lock: timeoutHandler triggered", async () => {
+test("lock: releaseTimeoutHandler triggered", async () => {
   let timeoutHandlerTriggered = false;
   const timeoutHandler = () => {
     timeoutHandlerTriggered = true;
@@ -225,7 +225,7 @@ test("lock: timeoutHandler triggered", async () => {
   expect(timeoutHandlerTriggered).toBe(true);
 });
 
-test("lock: timeoutHandler not triggered", async () => {
+test("lock: releaseTimeoutHandler not triggered", async () => {
   let timeoutHandlerTriggered = false;
   const releaseTimeoutHandler = () => {
     timeoutHandlerTriggered = true;
