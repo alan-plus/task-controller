@@ -1,4 +1,4 @@
-import { DiscardReason, ReleaseBeforeFinishReason, TaskExecutorReleaseFunction } from "../task-executors/promise-pool";
+import { AcquireResponse, DiscardReason, ReleaseBeforeFinishReason } from "../task-executors/promise-pool";
 import { TaskOptions } from "../types/promise-options.type";
 
 export interface TaskEntry {
@@ -8,7 +8,7 @@ export interface TaskEntry {
 }
 
 export interface WaitingTask extends TaskEntry {
-  resolve(result: TaskExecutorReleaseFunction): void;
+  resolve(result: AcquireResponse): void;
   reject(reason?: any): void;
   waitingTimeoutId?: NodeJS.Timeout;
 }
