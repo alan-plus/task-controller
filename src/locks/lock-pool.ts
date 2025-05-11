@@ -3,6 +3,7 @@ import { Lock } from "../interfaces/lock";
 import { AcquiredLock, WaitingLock } from "../interfaces/lock-entry";
 import { ReleaseFunction } from "../interfaces/release-function";
 import { LockOptions } from "./lock-mutex";
+import { OptionsSanitizerUtils } from "../utils/options-sanitizer.utils";
 
 export type TryAcquireResponse = { acquired: boolean; release?: ReleaseFunction };
 export type LockEvent = "error" | "lock-acquired" | "lock-released";
@@ -153,31 +154,16 @@ export class LockPool implements Lock {
     return lockEntry;
   }
 
-  private sanitizeOptions(options: PoolLockOptions | undefined): Required<PoolLockOptions> {
-    if (options === null || options === undefined || Array.isArray(options) || typeof options !== "object") {
-      return defaultOptions;
+  private sanitizeOptions(options?: PoolLockOptions): Required<PoolLockOptions> {
+    if (options) {
+      const sanitizedConcurrentLimit = OptionsSanitizerUtils.sanitizeNumberToPositiveGraterThanZeroInteger(options.concurrentLimit);
+      if (sanitizedConcurrentLimit === undefined) {
+        delete options.concurrentLimit;
+      } else {
+        options.concurrentLimit = sanitizedConcurrentLimit;
+      }
     }
 
-    const sanitizedOptions: any = { ...defaultOptions };
-
-    for (const key in defaultOptions) {
-      const typedKey = key as keyof PoolLockOptions;
-
-      const defaultValue = defaultOptions[typedKey];
-      const value = options[typedKey] as any;
-      if (value === null || value === undefined) {
-        continue;
-      }
-
-      const defaultValueType = typeof defaultValue;
-      const valueType = typeof value;
-      if (defaultValueType !== valueType) {
-        continue;
-      }
-
-      sanitizedOptions[typedKey] = value;
-    }
-
-    return sanitizedOptions as Required<PoolLockOptions>;
+    return OptionsSanitizerUtils.sanitizeToRequired(options, defaultOptions);
   }
 }

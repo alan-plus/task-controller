@@ -30,8 +30,7 @@ test("taskExecutor: prevent concurrent task execution (default options)", async 
 });
 
 test("taskExecutor: prevent concurrent task execution FIFO", async () => {
-  const abortController = new AbortController();
-  const taskExecutor = new PromiseMutex<string>({ queueType: "FIFO", signal: abortController.signal });
+  const taskExecutor = new PromiseMutex<string>({ queueType: "FIFO" });
   const resultsInOrder = new Array<string>();
 
   await taskExecutor.runMany([
@@ -584,4 +583,147 @@ test("taskExecutor: changeConcurrentLimit (PromiseMutex)", async () => {
 
   expect(runningLimitReachedBeforeChangeConcurrentLimit).toBe(true);
   expect(runningLimitReachedAfterChangeConcurrentLimit).toBe(true);
+});
+
+test("taskExecutor: TaskOptions (waitingTimeout)", async () => {
+  const taskExecutor = new PromiseMutex<string>();
+
+  let taskDiscardedEventTriggered = false;
+  let discardReason: DiscardReason | undefined;
+  let discardedTaskArg: string | undefined;
+  taskExecutor.on("task-discarded", (taskEntry) => {
+    taskDiscardedEventTriggered = true;
+    discardReason = taskEntry.discardReason;
+    discardedTaskArg = taskEntry.arg;
+  });
+
+  taskExecutor.run((arg) => task(arg, 100), "A");
+  taskExecutor.run((arg) => task(arg, 100), "B", { waitingTimeout: 30 });
+
+  await setTimeout(50, undefined);
+
+  expect(taskDiscardedEventTriggered).toBe(true);
+  if (discardReason !== undefined) {
+    expect(discardReason).toBe("timeoutReached");
+  } else {
+    fail("discardReason missed");
+  }
+  if (discardedTaskArg !== undefined) {
+    expect(discardedTaskArg).toBe("B");
+  } else {
+    fail("discardedTaskArg missed");
+  }
+});
+
+test("taskExecutor: TaskOptions (waitingTimeout, waitingTimeoutHandler)", async () => {
+  const taskExecutor = new PromiseMutex<string>();
+
+  let timeoutHandlerTriggered = false;
+  let taskArg: string | undefined;
+  const timeoutHandler = (taskEntry: TaskEntry) => {
+    timeoutHandlerTriggered = true;
+    taskArg = taskEntry.arg;
+  };
+
+  taskExecutor.run((arg) => task(arg, 100), "A");
+  taskExecutor.run((arg) => task(arg, 100), "B", { waitingTimeout: 30, waitingTimeoutHandler: timeoutHandler });
+
+  await setTimeout(55, undefined);
+
+  expect(timeoutHandlerTriggered).toBe(true);
+  if (taskArg !== undefined) {
+    expect(taskArg).toBe("B");
+  } else {
+    fail("taskArg missed");
+  }
+});
+
+test("taskExecutor: TaskOptions (errorHandler)", async () => {
+  const taskExecutor = new PromiseMutex<string>();
+
+  let errorEventTriggered = false;
+  let taskArg: string | undefined;
+  let errorMessage: string | undefined;
+
+  const errorHandler = (taskEntry: TaskEntry, error: any) => {
+    errorEventTriggered = true;
+    taskArg = taskEntry.arg;
+    errorMessage = error.message;
+  };
+
+  taskExecutor.run(
+    () => {
+      throw new Error("task_failed");
+    },
+    "A",
+    { errorHandler }
+  );
+
+  await setTimeout(10, undefined);
+
+  expect(errorEventTriggered).toBe(true);
+  if (errorMessage !== undefined) {
+    expect(errorMessage).toBe("task_failed");
+  } else {
+    fail("errorMessage missed");
+  }
+  if (taskArg !== undefined) {
+    expect(taskArg).toBe("A");
+  } else {
+    fail("taskArg missed");
+  }
+});
+
+test("taskExecutor: TaskOptions (releaseTimeout, releaseTimeoutHandler)", async () => {
+  let timeoutHandlerTriggered = false;
+  let taskArg: string | undefined;
+  const timeoutHandler = (taskEntry: TaskEntry) => {
+    timeoutHandlerTriggered = true;
+    taskArg = taskEntry.arg;
+  };
+
+  const taskExecutor = new PromiseMutex();
+  taskExecutor.run((arg) => task(arg, 100), "A", { releaseTimeout: 50, releaseTimeoutHandler: timeoutHandler });
+
+  await setTimeout(70, undefined);
+
+  expect(timeoutHandlerTriggered).toBe(true);
+  if (taskArg !== undefined) {
+    expect(taskArg).toBe("A");
+  } else {
+    fail("taskArg missed");
+  }
+});
+
+test("taskExecutor: TaskOptions (signal)", async () => {
+  const abortController = new AbortController();
+
+  const taskExecutor = new PromiseMutex<string>();
+  let taskDiscardedEventTriggered = false;
+  let discardReason: DiscardReason | undefined;
+  let discardedTaskArg: string | undefined;
+  taskExecutor.on("task-discarded", (taskEntry) => {
+    taskDiscardedEventTriggered = true;
+    discardReason = taskEntry.discardReason;
+    discardedTaskArg = taskEntry.arg;
+  });
+
+  taskExecutor.run((arg) => task(arg, 20), "A");
+  taskExecutor.run((arg) => task(arg, 100), "B", { signal: abortController.signal });
+
+  await setTimeout(15, undefined);
+  abortController.abort();
+  await setTimeout(15, undefined);
+
+  expect(taskDiscardedEventTriggered).toBe(true);
+  if (discardReason !== undefined) {
+    expect(discardReason).toBe("abortSignal");
+  } else {
+    fail("discardReason missed");
+  }
+  if (discardedTaskArg !== undefined) {
+    expect(discardedTaskArg).toBe("B");
+  } else {
+    fail("discardedTaskArg missed");
+  }
 });

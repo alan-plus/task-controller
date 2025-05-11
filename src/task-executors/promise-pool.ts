@@ -2,6 +2,7 @@ import { RunningTask, TaskEntry, WaitingTask } from "../interfaces/task-entry";
 import { TaskExecutor } from "../interfaces/task.executor";
 import { EventEmitter } from "events";
 import { PromisePoolOptions, TaskOptions } from "../types/promise-options.type";
+import { OptionsSanitizerUtils } from "../utils/options-sanitizer.utils";
 
 export type TryRunResponse<T> = { available: true; run: () => Promise<PromiseSettledResult<T>> } | { available: false; run?: undefined };
 export type TaskEvent = "error" | "task-started" | "task-finished" | "task-failure" | "task-released-before-finished" | "task-discarded";
@@ -27,7 +28,7 @@ const defaultOptions: Required<PromisePoolOptions> = {
   releaseTimeoutHandler: () => {},
   waitingTimeout: 0,
   waitingTimeoutHandler: () => {},
-  errorHandler: (error: any) => {},
+  errorHandler: () => {},
   signal: { aborted: false } as AbortSignal,
 } satisfies PromisePoolOptions;
 
@@ -53,13 +54,17 @@ export class PromisePool<T> implements TaskExecutor<T> {
   }
 
   public async run<T>(task: (arg?: any) => Promise<T>, arg?: any, options?: TaskOptions): Promise<PromiseSettledResult<T>> {
-    return await this.enqueueAndRun(task, arg, this.sanitizeTaskOptions(options));
+    return await this.enqueueAndRun(task, arg, OptionsSanitizerUtils.sanitize(options, defaultOptions));
   }
 
-  public async runMany<T>(tasks: Array<() => Promise<T>>, args?: any[], options?: TaskOptions): Promise<PromiseSettledResult<T>[]> {
+  public async runMany<T>(
+    tasks: Array<(arg?: any) => Promise<T>>,
+    args?: any[],
+    options?: TaskOptions
+  ): Promise<PromiseSettledResult<T>[]> {
     const promises = tasks.map((task, index) => {
       const arg = args?.length ? args[index] : undefined;
-      return this.enqueueAndRun(task, arg ?? undefined, this.sanitizeTaskOptions(options));
+      return this.enqueueAndRun(task, arg ?? undefined, OptionsSanitizerUtils.sanitize(options, defaultOptions));
     });
 
     return Promise.all(promises);
@@ -76,7 +81,7 @@ export class PromisePool<T> implements TaskExecutor<T> {
       return { available: false };
     }
 
-    return { available: true, run: () => this.enqueueAndRun(task, arg, this.sanitizeTaskOptions(options)) };
+    return { available: true, run: () => this.enqueueAndRun(task, arg, OptionsSanitizerUtils.sanitize(options, defaultOptions)) };
   }
 
   public releaseRunningTasks(): void {
@@ -114,7 +119,7 @@ export class PromisePool<T> implements TaskExecutor<T> {
   }
 
   public changeConcurrentLimit(newConcurrentLimit: number): void {
-    if (!newConcurrentLimit) {
+    if (newConcurrentLimit === null || newConcurrentLimit === undefined) {
       return;
     }
 
@@ -301,69 +306,16 @@ export class PromisePool<T> implements TaskExecutor<T> {
     return taskEntry;
   }
 
-  private sanitizeTaskOptions(options: TaskOptions | undefined): TaskOptions | undefined {
-    if (options === null || options === undefined || Array.isArray(options) || typeof options !== "object") {
-      return undefined;
-    }
-
-    const sanitizedOptions: TaskOptions = {};
-
-    for (const key in defaultOptions) {
-      const typedKey = key as keyof TaskOptions;
-
-      const defaultValue = defaultOptions[typedKey];
-      const value = options[typedKey] as any;
-      if (value === null || value === undefined) {
-        continue;
-      }
-
-      const defaultValueType = typeof defaultValue;
-      const valueType = typeof value;
-      if (defaultValueType !== valueType) {
-        continue;
-      }
-
-      sanitizedOptions[typedKey] = value;
-    }
-
-    return sanitizedOptions;
-  }
-
-  private sanitizeOptions(options: PromisePoolOptions | undefined): Required<PromisePoolOptions> {
-    if (options === null || options === undefined || Array.isArray(options) || typeof options !== "object") {
-      return defaultOptions;
-    }
-
-    if (options.concurrentLimit !== undefined && options.concurrentLimit !== null && typeof options.concurrentLimit === "number") {
-      if (!Number.isFinite(options.concurrentLimit)) {
+  private sanitizeOptions(options?: PromisePoolOptions): Required<PromisePoolOptions> {
+    if (options) {
+      const sanitizedConcurrentLimit = OptionsSanitizerUtils.sanitizeNumberToPositiveGraterThanZeroInteger(options.concurrentLimit);
+      if (sanitizedConcurrentLimit === undefined) {
         delete options.concurrentLimit;
-      } else if (Number.isNaN(options.concurrentLimit)) {
-        delete options.concurrentLimit;
-      } else if (!Number.isInteger(options.concurrentLimit)) {
-        options.concurrentLimit = Math.round(options.concurrentLimit);
+      } else {
+        options.concurrentLimit = sanitizedConcurrentLimit;
       }
     }
 
-    const sanitizedOptions: any = { ...defaultOptions };
-
-    for (const key in defaultOptions) {
-      const typedKey = key as keyof PromisePoolOptions;
-
-      const defaultValue = defaultOptions[typedKey];
-      const value = options[typedKey] as any;
-      if (value === null || value === undefined) {
-        continue;
-      }
-
-      const defaultValueType = typeof defaultValue;
-      const valueType = typeof value;
-      if (defaultValueType !== valueType) {
-        continue;
-      }
-
-      sanitizedOptions[typedKey] = value;
-    }
-
-    return sanitizedOptions as Required<PromisePoolOptions>;
+    return OptionsSanitizerUtils.sanitizeToRequired(options, defaultOptions);
   }
 }
