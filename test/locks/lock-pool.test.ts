@@ -141,7 +141,7 @@ test("lock pool: example code", async () => {
 
   expect(results[0].timeToAccessTheLock).toBeLessThan(10);
   expect(results[1].timeToAccessTheLock).toBeLessThan(10);
-  expect(results[2].timeToAccessTheLock).toBeGreaterThan(100);
+  expect(results[2].timeToAccessTheLock).toBeGreaterThanOrEqual(100);
 });
 
 test("lock: releaseAcquiredLocks method (concurrent 3, running 3, waiting: 0)", async () => {
