@@ -1,3 +1,4 @@
+[![Coverage Status](https://coveralls.io/repos/github/alan-plus/pro-task/badge.svg?branch=development)](https://coveralls.io/github/alan-plus/pro-task?branch=development)
 # Pro-Task
 A set of classes to help with concurrent control of async function.
 - Locks
