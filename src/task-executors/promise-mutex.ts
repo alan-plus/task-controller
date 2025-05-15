@@ -1,4 +1,4 @@
-import { PromiseMutexOptions, PromisePoolOptions } from "../types/promise-options.type";
+import { PromiseMutexOptions, PromisePoolOptions } from "../types/task-executor.type";
 import { PromisePool } from "./promise-pool";
 
 export class PromiseMutex<T> extends PromisePool<T> {

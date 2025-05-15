@@ -1,4 +1,4 @@
-import { TryAcquireResponse, LockEvent } from "../types/lock-options.type";
+import { TryAcquireResponse, LockEvent } from "../types/lock.type";
 
 export interface Lock {
   acquire(): Promise<ReleaseFunction>;

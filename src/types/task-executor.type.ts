@@ -1,5 +1,6 @@
-import { TaskEntry } from "../interfaces/task.executor";
-import { QueueType } from "./lock-options.type";
+import { TaskEntry } from "../interfaces/task-executor";
+import { QueueType } from "./lock.type";
+import { Lock } from "../interfaces/lock";
 
 export type TaskOptions = {
   releaseTimeout?: number;
@@ -24,3 +25,6 @@ export type TaskEventError = { code: TaskErrorCode; error: any };
 
 export type ReleaseBeforeFinishReason = "timeoutReached" | "forced";
 export type DiscardReason = "timeoutReached" | "forced" | "abortSignal";
+
+export type PromiseMultiStepOptions = { stepConcurrentLimits: number[] };
+export type MultiStepTask<T> = (...stepLocks: Lock[]) => Promise<T>;

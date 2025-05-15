@@ -1,6 +1,6 @@
 import { EventEmitter } from "events";
 import { AcquiredLock, Lock, ReleaseFunction, WaitingLock } from "../interfaces/lock";
-import { LockEvent, LockEventError, PoolLockOptions, TryAcquireResponse } from "../types/lock-options.type";
+import { LockEvent, LockEventError, PoolLockOptions, TryAcquireResponse } from "../types/lock.type";
 import { OptionsSanitizerUtils } from "../utils/options-sanitizer.utils";
 
 interface InternalReleaseFunction extends ReleaseFunction {

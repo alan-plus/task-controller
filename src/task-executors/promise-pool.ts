@@ -5,7 +5,7 @@ import {
   TaskExecutor,
   TaskExecutorReleaseFunction,
   WaitingTask,
-} from "../interfaces/task.executor";
+} from "../interfaces/task-executor";
 import { EventEmitter } from "events";
 import {
   PromisePoolOptions,
@@ -14,7 +14,7 @@ import {
   TaskEventError,
   TaskOptions,
   TryRunResponse,
-} from "../types/promise-options.type";
+} from "../types/task-executor.type";
 import { OptionsSanitizerUtils } from "../utils/options-sanitizer.utils";
 
 const defaultOptions: Required<PromisePoolOptions> = {

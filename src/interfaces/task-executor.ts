@@ -1,4 +1,4 @@
-import { DiscardReason, ReleaseBeforeFinishReason, TaskEvent, TaskOptions, TryRunResponse } from "../types/promise-options.type";
+import { DiscardReason, ReleaseBeforeFinishReason, TaskEvent, TaskOptions, TryRunResponse } from "../types/task-executor.type";
 
 export interface TaskExecutor<T> {
   run<T>(task: (arg?: any) => Promise<T>, arg?: any, options?: TaskOptions): Promise<PromiseSettledResult<T>>;
