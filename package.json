@@ -1,14 +1,14 @@
 {
-  "name": "pro-task",
+  "name": "tasktly",
   "version": "0.0.1-beta",
   "private": false,
-  "homepage": "https://github.com/alan-plus/pro-task",
+  "homepage": "https://github.com/alan-plus/tasktly",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/alan-plus/pro-task.git"
+    "url": "git+https://github.com/alan-plus/tasktly.git"
   },
   "bugs": {
-    "url": "https://github.com/alan-plus/pro-task/issues"
+    "url": "https://github.com/alan-plus/tasktly/issues"
   },
   "description": "Modern JavaScript task utility library",
   "main": "dist/index.js",
