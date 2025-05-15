@@ -1,0 +1,41 @@
+{
+  "name": "pro-task",
+  "version": "0.0.1-beta",
+  "private": false,
+  "homepage": "https://github.com/alan-plus/pro-task",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alan-plus/pro-task.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alan-plus/pro-task/issues"
+  },
+  "description": "Modern JavaScript task utility library",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "types": "tsc --noEmit",
+    "test": "jest",
+    "coverage": "jest --coverage"
+  },
+  "author": "Alan Pro",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.14.1",
+    "@typescript-eslint/eslint-plugin": "^8.30.1",
+    "@typescript-eslint/parser": "^8.30.1",
+    "coveralls": "^3.1.1",
+    "eslint": "^9.24.0",
+    "eslint-config-prettier": "^10.1.2",
+    "eslint-plugin-prettier": "^5.2.6",
+    "jest": "^29.7.0",
+    "prettier": "^3.5.3",
+    "ts-jest": "^29.3.2",
+    "typescript": "^5.8.3"
+  }
+}
