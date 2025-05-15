@@ -1,11 +1,14 @@
 import { EventEmitter } from "events";
-import { AcquiredLock, Lock, ReleaseFunction, WaitingLock } from "../interfaces/lock";
-import { LockEvent, LockEventError, PoolLockOptions, TryAcquireResponse } from "../types/lock.type";
+import { ILock } from "../interfaces/lock";
+import { LockEvent, LockEventError, PoolLockOptions, ReleaseFunction, TryAcquireResponse } from "../types/lock.type";
 import { OptionsSanitizerUtils } from "../utils/options-sanitizer.utils";
 
-interface InternalReleaseFunction extends ReleaseFunction {
-  (timeoutReached?: boolean): void;
-}
+type InternalReleaseFunction = ReleaseFunction & { (timeoutReached?: boolean): void };
+type WaitingLock = {
+  resolve(result: ReleaseFunction): void;
+  reject(reason?: any): void;
+};
+type AcquiredLock = { releaseTimeoutId?: NodeJS.Timeout };
 
 const defaultOptions: Required<PoolLockOptions> = {
   concurrentLimit: 1,
@@ -14,7 +17,7 @@ const defaultOptions: Required<PoolLockOptions> = {
   releaseTimeoutHandler: () => {},
 } satisfies PoolLockOptions;
 
-export class LockPool implements Lock {
+export class LockPool implements ILock {
   private readonly options: Required<PoolLockOptions>;
   private readonly waitingQueue = new Array<WaitingLock>();
   private readonly acquiredQueue = new Map<AcquiredLock, ReleaseFunction>();
@@ -58,9 +61,9 @@ export class LockPool implements Lock {
     return { acquired: true, release: releaseFunction };
   }
 
-  public isLockLimitReached(): boolean {
+  public isAvailable(): boolean {
     const conncurrentLimitReached = this.acquiredQueue.size >= this.options.concurrentLimit;
-    return conncurrentLimitReached;
+    return !conncurrentLimitReached;
   }
 
   public releaseAcquiredLocks(): void {
@@ -118,7 +121,7 @@ export class LockPool implements Lock {
   }
 
   private dispatchNextLock(): void {
-    if (this.isLockLimitReached()) {
+    if (!this.isAvailable()) {
       return;
     }
 

@@ -1,12 +1,12 @@
 import { setTimeout } from "timers/promises";
 import { LockMutex } from "../../src/locks/lock-mutex";
-import { Lock, ReleaseFunction } from "../../src/interfaces/lock";
-import { LockEventError } from "../../src/types/lock.type";
+import { ILock } from "../../src/interfaces/lock";
+import { LockEventError, ReleaseFunction } from "../../src/types/lock.type";
 
 class Task {
   constructor(
     private readonly result: string,
-    private readonly lock?: Lock
+    private readonly lock?: ILock
   ) {}
 
   public async run(timeout: number, resultsInOrder?: string[]): Promise<string> {
@@ -98,7 +98,7 @@ test("lock: method locked true", async () => {
 
   await lock.acquire();
 
-  expect(lock.isLockLimitReached()).toBe(true);
+  expect(!lock.isAvailable()).toBe(true);
 });
 
 test("lock: method locked true", async () => {
@@ -107,7 +107,7 @@ test("lock: method locked true", async () => {
   const release = await lock.acquire();
   release();
 
-  expect(lock.isLockLimitReached()).toBe(false);
+  expect(!lock.isAvailable()).toBe(false);
 });
 
 test("lock: release multiple times", async () => {
@@ -117,7 +117,7 @@ test("lock: release multiple times", async () => {
   release();
   release();
 
-  expect(lock.isLockLimitReached()).toBe(false);
+  expect(!lock.isAvailable()).toBe(false);
 });
 
 test("lock: method tryAcquire true", async () => {
@@ -190,9 +190,9 @@ test("lock: releaseTimeout not reached", async () => {
   const lock = new LockMutex({ releaseTimeout: 200 });
   lock.acquire();
 
-  const isLockedBeforeDelay = lock.isLockLimitReached();
+  const isLockedBeforeDelay = !lock.isAvailable();
   await setTimeout(100, undefined);
-  const isLockedAfterDelay = lock.isLockLimitReached();
+  const isLockedAfterDelay = !lock.isAvailable();
 
   expect(isLockedBeforeDelay).toBe(true);
   expect(isLockedAfterDelay).toBe(true);
@@ -202,9 +202,9 @@ test("lock: releaseTimeout reached", async () => {
   const lock = new LockMutex({ releaseTimeout: 50 });
   lock.acquire();
 
-  const isLockedBeforeDelay = lock.isLockLimitReached();
+  const isLockedBeforeDelay = !lock.isAvailable();
   await setTimeout(100, undefined);
-  const isLockedAfterDelay = lock.isLockLimitReached();
+  const isLockedAfterDelay = !lock.isAvailable();
 
   expect(isLockedBeforeDelay).toBe(true);
   expect(isLockedAfterDelay).toBe(false);

@@ -1,10 +1,10 @@
 import { LockPool } from "../locks/lock-pool";
-import { Lock } from "../interfaces/lock";
+import { ILock } from "../interfaces/lock";
 import { PromiseMultiStepOptions, MultiStepTask } from "../types/task-executor.type";
 
 export class PromiseMultiStep<T> {
   private readonly options: Required<PromiseMultiStepOptions>;
-  private readonly stepLocks = new Array<Lock>();
+  private readonly stepLocks = new Array<ILock>();
 
   constructor(options: PromiseMultiStepOptions) {
     this.options = options;
@@ -29,12 +29,12 @@ export class PromiseMultiStep<T> {
     }
   }
 
-  public isStepLockLimitReached(stepIndex: number): boolean{
+  public isStepLockLimitReached(stepIndex: number): boolean {
     const stepLock = this.stepLocks[stepIndex];
-    if(!stepLock){
+    if (!stepLock) {
       return false;
     }
 
-    return stepLock.isLockLimitReached();
+    return !stepLock.isAvailable();
   }
 }

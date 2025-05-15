@@ -1,21 +1,27 @@
-import {
-  AcquireResponse,
-  RunningTask,
-  TaskEntry,
-  TaskExecutor,
-  TaskExecutorReleaseFunction,
-  WaitingTask,
-} from "../interfaces/task-executor";
+import { TaskExecutor } from "../interfaces/task-executor";
 import { EventEmitter } from "events";
 import {
   PromisePoolOptions,
   ReleaseBeforeFinishReason,
+  TaskEntry,
   TaskEvent,
   TaskEventError,
   TaskOptions,
   TryRunResponse,
 } from "../types/task-executor.type";
 import { OptionsSanitizerUtils } from "../utils/options-sanitizer.utils";
+
+type WaitingTask = TaskEntry & {
+  resolve(result: AcquireResponse): void;
+  reject(reason?: any): void;
+  waitingTimeoutId?: NodeJS.Timeout;
+};
+type RunningTask = TaskEntry & { releaseTimeoutId?: NodeJS.Timeout };
+type TaskExecutorReleaseFunction = { (reason?: ReleaseBeforeFinishReason): void };
+type AcquireResponse = {
+  release: TaskExecutorReleaseFunction;
+  taskEntry: TaskEntry;
+};
 
 const defaultOptions: Required<PromisePoolOptions> = {
   concurrentLimit: 1,

@@ -1,4 +1,4 @@
-import { DiscardReason, ReleaseBeforeFinishReason, TaskEvent, TaskOptions, TryRunResponse } from "../types/task-executor.type";
+import { TaskEntry, TaskEvent, TaskOptions, TryRunResponse } from "../types/task-executor.type";
 
 export interface TaskExecutor<T> {
   run<T>(task: (arg?: any) => Promise<T>, arg?: any, options?: TaskOptions): Promise<PromiseSettledResult<T>>;
@@ -13,30 +13,4 @@ export interface TaskExecutor<T> {
   waitingTasks(): number;
   runningTasks(): number;
   expiredTasks(): number;
-}
-
-export interface TaskEntry {
-  arg?: any | undefined;
-  options?: TaskOptions | undefined;
-  releaseReason?: ReleaseBeforeFinishReason;
-  discardReason?: DiscardReason;
-}
-
-export interface WaitingTask extends TaskEntry {
-  resolve(result: AcquireResponse): void;
-  reject(reason?: any): void;
-  waitingTimeoutId?: NodeJS.Timeout;
-}
-
-export interface RunningTask extends TaskEntry {
-  releaseTimeoutId?: NodeJS.Timeout;
-}
-
-export interface TaskExecutorReleaseFunction {
-  (reason?: ReleaseBeforeFinishReason): void;
-}
-
-export interface AcquireResponse {
-  release: TaskExecutorReleaseFunction;
-  taskEntry: TaskEntry;
 }
