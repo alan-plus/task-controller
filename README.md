@@ -1,5 +1,5 @@
-[![Coverage Status](https://coveralls.io/repos/github/alan-plus/pro-task/badge.svg?branch=development)](https://coveralls.io/github/alan-plus/pro-task?branch=development)
-# Pro-Task
+# Tasktly
+[![Coverage Status](https://coveralls.io/repos/github/alan-plus/tasktly/badge.svg?branch=development)](https://coveralls.io/github/alan-plus/tasktly?branch=development)
 A set of classes that provide assistance with the concurrent control of asynchronous functions.
 - Locks
   - [LockMutex](#LockMutex): prevents concurrent access to resources.
@@ -12,13 +12,13 @@ A set of classes that provide assistance with the concurrent control of asynchro
 ## Getting started
 ### Installation:
 ```
-npm install pro-task
+npm install tasktly
 ```
 
 ### LockMutex
 Use instances of LockMutex to protect access to resources.
 ```
-import { LockMutex } from "pro-task";
+import { LockMutex } from "tasktly";
 
 const lock = new LockMutex();
 
@@ -31,12 +31,12 @@ async function sample () {
   }
 }
 ```
-**IMPORTANT:** Make sure to always call the `release` function
+**IMPORTANT:** Make sure to always call the `release` function.
 ### LockPool
 Use instances of LockPool to allow limited concurrent access to resources.
 
 ```
-import { LockPool } from "pro-task";
+import { LockPool } from "tasktly";
 
   // concurrent access to resource limited to 2
   const lock = new LockPool({ concurrentLimit: 2 }); 
