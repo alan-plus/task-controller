@@ -1,6 +1,11 @@
 import { TryAcquireResponse, LockEvent } from "../types/lock.type";
 
 export interface Lock {
+  /**
+   * Acquire the lock
+   *
+   * @returns Fulfills with a {ReleaseFunction} function once the lock is acquire.
+   */
   acquire(): Promise<ReleaseFunction>;
   tryAcquire(): TryAcquireResponse;
   isLockLimitReached(): boolean;

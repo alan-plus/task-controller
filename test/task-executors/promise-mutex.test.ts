@@ -1,7 +1,7 @@
 import { setTimeout } from "timers/promises";
 import { PromiseMutex } from "../../src/task-executors/promise-mutex";
-import { TaskEntry } from "../../src/interfaces/task.executor";
-import { ReleaseBeforeFinishReason, DiscardReason, TaskEventError } from "../../src/types/promise-options.type";
+import { DiscardReason, ReleaseBeforeFinishReason, TaskEventError } from "../../src/types/task-executor.type";
+import { TaskEntry } from "../../src/interfaces/task-executor";
 
 function task(result: string, timeout: number, resultsInOrder?: string[]): Promise<string> {
   return new Promise<string>(async (resolve, reject) => {
