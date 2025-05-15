@@ -30,7 +30,7 @@ async function sample () {
   }
 }
 ```
-**IMPORTANT:** Make sure to always call the `release` function
+**IMPORTANT:** Make sure to always call the `release` function.
 ### LockPool
 Use instances of LockPool to allow limited concurrent access to resources.
 
