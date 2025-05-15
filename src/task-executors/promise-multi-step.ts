@@ -1,9 +1,6 @@
 import { LockPool } from "../locks/lock-pool";
 import { Lock } from "../interfaces/lock";
-
-export type PromiseMultiStepOptions = { stepConcurrentLimits: number[] };
-
-type MultiStepTask<T> = (...stepLocks: Lock[]) => Promise<T>;
+import { PromiseMultiStepOptions, MultiStepTask } from "../types/promise-multi-step-options.type";
 
 export class PromiseMultiStep<T> {
   private readonly options: Required<PromiseMultiStepOptions>;

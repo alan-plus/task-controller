@@ -1,41 +1,45 @@
 [![Coverage Status](https://coveralls.io/repos/github/alan-plus/pro-task/badge.svg?branch=development)](https://coveralls.io/github/alan-plus/pro-task?branch=development)
 # Pro-Task
-A set of classes to help with concurrent control of async function.
+A set of classes that provide assistance with the concurrent control of asynchronous functions.
 - Locks
-  - [LockMutex](#LockMutex): to prevent concurrent access to resource.
-  - [LockPool](#LockPool): to allow limited concurrent access to resource.
+  - [LockMutex](#LockMutex): prevents concurrent access to resources.
+  - [LockPool](#LockPool): allows limited concurrent access to resources.
 - Task Executors
-  - [PromiseMutex](#PromiseMutex): to prevent concurrent task execution
-  - [PromisePool](#PromisePool): to allow limited concurrent task execution
-  - [PromiseMultiStep](#PromiseMultiStep): to customize the concurrence of each step
+  - [PromiseMutex](#PromiseMutex): prevents concurrent task execution.
+  - [PromisePool](#PromisePool): allows limited concurrent task execution.
+  - [PromiseMultiStep](#PromiseMultiStep): allows the concurrency of each step to be adjusted.
 
 ## Getting started
-Install with npm:
+### Installation:
 ```
 npm install pro-task
 ```
 
 ### LockMutex
-
+Use instances of LockMutex to protect access to resources.
 ```
 import { LockMutex } from "pro-task";
 
-  const lock = new LockMutex();
+const lock = new LockMutex();
 
+async function sample () {
   const release = await lock.acquire();
   try {
     // access the resource protected by this lock
   } finally {
     release();
   }
+}
 ```
+**IMPORTANT:** Make sure to always call the `release` function
 ### LockPool
+Use instances of LockPool to allow limited concurrent access to resources.
 
 ```
 import { LockPool } from "pro-task";
 
   // concurrent access to resource limited to 2
-  const l = new LockPool({ concurrentLimit: 2 }); 
+  const lock = new LockPool({ concurrentLimit: 2 }); 
 
   await Promise.all([
     

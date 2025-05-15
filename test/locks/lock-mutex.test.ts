@@ -1,8 +1,7 @@
 import { setTimeout } from "timers/promises";
 import { LockMutex } from "../../src/locks/lock-mutex";
-import { Lock } from "../../src/interfaces/lock";
-import { ReleaseFunction } from "../../src/interfaces/release-function";
-import { LockEventError } from "../../src/locks/lock-pool";
+import { Lock, ReleaseFunction } from "../../src/interfaces/lock";
+import { LockEventError } from "../../src/types/lock-options.type";
 
 class Task {
   constructor(

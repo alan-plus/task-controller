@@ -1,6 +1,5 @@
-import { ErrorHandler } from "../task-executors/promise-mutex";
-import { QueueType } from "./queue.type";
-import { TaskTimeoutHandler } from "./task-timeout-handler.type";
+import { TaskEntry } from "../interfaces/task.executor";
+import { QueueType } from "./lock-options.type";
 
 export type TaskOptions = {
   releaseTimeout?: number;
@@ -11,6 +10,17 @@ export type TaskOptions = {
   signal?: AbortSignal;
 };
 
-export type PromiseMutexOptions = TaskOptions & { queueType?: QueueType; };
+export type PromiseMutexOptions = TaskOptions & { queueType?: QueueType };
 
-export type PromisePoolOptions = PromiseMutexOptions & { concurrentLimit?: number; };
+export type PromisePoolOptions = PromiseMutexOptions & { concurrentLimit?: number };
+
+export type TaskTimeoutHandler = (taskEntry: TaskEntry) => void;
+export type ErrorHandler = (taskEntry: TaskEntry, error: any) => void;
+
+export type TryRunResponse<T> = { available: true; run: () => Promise<PromiseSettledResult<T>> } | { available: false; run?: undefined };
+export type TaskEvent = "error" | "task-started" | "task-finished" | "task-failure" | "task-released-before-finished" | "task-discarded";
+export type TaskErrorCode = "waiting-timeout-handler-failure" | "release-timeout-handler-failure" | "error-handler-failure";
+export type TaskEventError = { code: TaskErrorCode; error: any };
+
+export type ReleaseBeforeFinishReason = "timeoutReached" | "forced";
+export type DiscardReason = "timeoutReached" | "forced" | "abortSignal";

@@ -1,8 +1,5 @@
-import { TaskEntry } from "../interfaces/task-entry";
 import { PromiseMutexOptions, PromisePoolOptions } from "../types/promise-options.type";
 import { PromisePool } from "./promise-pool";
-
-export type ErrorHandler = (taskEntry: TaskEntry, error: any) => void;
 
 export class PromiseMutex<T> extends PromisePool<T> {
   constructor(options?: PromiseMutexOptions) {

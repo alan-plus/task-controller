@@ -1,15 +1,7 @@
 import { EventEmitter } from "events";
-import { Lock } from "../interfaces/lock";
-import { AcquiredLock, WaitingLock } from "../interfaces/lock-entry";
-import { ReleaseFunction } from "../interfaces/release-function";
-import { LockOptions } from "./lock-mutex";
+import { AcquiredLock, Lock, ReleaseFunction, WaitingLock } from "../interfaces/lock";
+import { LockEvent, LockEventError, PoolLockOptions, TryAcquireResponse } from "../types/lock-options.type";
 import { OptionsSanitizerUtils } from "../utils/options-sanitizer.utils";
-
-export type TryAcquireResponse = { acquired: boolean; release?: ReleaseFunction };
-export type LockEvent = "error" | "lock-acquired" | "lock-released";
-export type LockErrorCode = "release-timeout-handler-failure";
-export type LockEventError = { code: LockErrorCode; error: any };
-export type PoolLockOptions = LockOptions & { concurrentLimit?: number };
 
 interface InternalReleaseFunction extends ReleaseFunction {
   (timeoutReached?: boolean): void;

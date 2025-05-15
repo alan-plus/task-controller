@@ -1,25 +1,21 @@
-import { RunningTask, TaskEntry, WaitingTask } from "../interfaces/task-entry";
-import { TaskExecutor } from "../interfaces/task.executor";
+import {
+  AcquireResponse,
+  RunningTask,
+  TaskEntry,
+  TaskExecutor,
+  TaskExecutorReleaseFunction,
+  WaitingTask,
+} from "../interfaces/task.executor";
 import { EventEmitter } from "events";
-import { PromisePoolOptions, TaskOptions } from "../types/promise-options.type";
+import {
+  PromisePoolOptions,
+  ReleaseBeforeFinishReason,
+  TaskEvent,
+  TaskEventError,
+  TaskOptions,
+  TryRunResponse,
+} from "../types/promise-options.type";
 import { OptionsSanitizerUtils } from "../utils/options-sanitizer.utils";
-
-export type TryRunResponse<T> = { available: true; run: () => Promise<PromiseSettledResult<T>> } | { available: false; run?: undefined };
-export type TaskEvent = "error" | "task-started" | "task-finished" | "task-failure" | "task-released-before-finished" | "task-discarded";
-export type TaskErrorCode = "waiting-timeout-handler-failure" | "release-timeout-handler-failure" | "error-handler-failure";
-export type TaskEventError = { code: TaskErrorCode; error: any };
-
-export type ReleaseBeforeFinishReason = "timeoutReached" | "forced";
-export type DiscardReason = "timeoutReached" | "forced" | "abortSignal";
-
-export interface TaskExecutorReleaseFunction {
-  (reason?: ReleaseBeforeFinishReason): void;
-}
-
-export interface AcquireResponse {
-  release: TaskExecutorReleaseFunction;
-  taskEntry: TaskEntry;
-}
 
 const defaultOptions: Required<PromisePoolOptions> = {
   concurrentLimit: 1,
