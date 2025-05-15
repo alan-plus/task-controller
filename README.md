@@ -1,4 +1,5 @@
 # Tasktly
+[![Coverage Status](https://coveralls.io/repos/github/alan-plus/tasktly/badge.svg?branch=development)](https://coveralls.io/github/alan-plus/tasktly?branch=development)
 A set of classes that provide assistance with the concurrent control of asynchronous functions.
 - Locks
   - [LockMutex](#LockMutex): prevents concurrent access to resources.
