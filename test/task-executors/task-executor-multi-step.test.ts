@@ -1,6 +1,6 @@
 import { setTimeout } from "timers/promises";
-import { PromiseMultiStep } from "../../src/task-executors/promise-multi-step";
 import { ILock } from "../../src/interfaces/lock";
+import { TaskExecutorMultiStep } from "../../src/task-executors/task-executor-multi-step";
 
 function task(
   result: string,
@@ -46,7 +46,7 @@ function task(
 }
 
 test("promise multi step: prevent or allow limited concurrent step execution", async () => {
-  const taskExecutor = new PromiseMultiStep<string>({ stepConcurrentLimits: [1, 2, 2] });
+  const taskExecutor = new TaskExecutorMultiStep<string>({ stepConcurrentLimits: [1, 2, 2] });
   const stepResultsArray = new Array<string[]>();
   const resultsStep1 = new Array<string>();
   const resultsStep2 = new Array<string>();
@@ -75,7 +75,7 @@ test("promise multi step: prevent or allow limited concurrent step execution", a
 });
 
 test("promise multi step: method run", async () => {
-  const taskExecutor = new PromiseMultiStep<string>({ stepConcurrentLimits: [1, 2, 2] });
+  const taskExecutor = new TaskExecutorMultiStep<string>({ stepConcurrentLimits: [1, 2, 2] });
   const stepResultsArray = new Array<string[]>();
   const resultsStep1 = new Array<string>();
   const resultsStep2 = new Array<string>();
@@ -110,7 +110,7 @@ test("promise multi step: method run", async () => {
 });
 
 test("promise multi step: releaseAll", async () => {
-  const taskExecutor = new PromiseMultiStep<string>({ stepConcurrentLimits: [1, 1, 1] });
+  const taskExecutor = new TaskExecutorMultiStep<string>({ stepConcurrentLimits: [1, 1, 1] });
 
   taskExecutor.run((stepLock1: ILock, stepLock2: ILock, stepLock3: ILock) => task("A", 50, null, stepLock1, stepLock2, stepLock3));
   taskExecutor.run((stepLock1: ILock, stepLock2: ILock, stepLock3: ILock) => task("B", 50, null, stepLock1, stepLock2, stepLock3));
@@ -138,7 +138,7 @@ test("promise multi step: releaseAll", async () => {
 });
 
 test("promise multi step: isStepLockLimitReached (not exist step)", async () => {
-  const taskExecutor = new PromiseMultiStep<string>({ stepConcurrentLimits: [1, 1, 1] });
+  const taskExecutor = new TaskExecutorMultiStep<string>({ stepConcurrentLimits: [1, 1, 1] });
 
   const notExistStepLockLimitReached = taskExecutor.isStepLockLimitReached(4);
 

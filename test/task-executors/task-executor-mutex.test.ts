@@ -1,5 +1,5 @@
 import { setTimeout } from "timers/promises";
-import { PromiseMutex } from "../../src/task-executors/promise-mutex";
+import { TaskExecutorMutex } from "../../src/task-executors/task-executor-mutex";
 import { DiscardReason, ReleaseBeforeFinishReason, TaskEntry, TaskEventError } from "../../src/types/task-executor.type";
 
 function task(result: string, timeout: number, resultsInOrder?: string[]): Promise<string> {
@@ -14,7 +14,7 @@ function task(result: string, timeout: number, resultsInOrder?: string[]): Promi
 }
 
 test("taskExecutor: prevent concurrent task execution (default options)", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
   const resultsInOrder = new Array<string>();
 
   await taskExecutor.runMany([
@@ -29,7 +29,7 @@ test("taskExecutor: prevent concurrent task execution (default options)", async 
 });
 
 test("taskExecutor: prevent concurrent task execution FIFO", async () => {
-  const taskExecutor = new PromiseMutex<string>({ queueType: "FIFO" });
+  const taskExecutor = new TaskExecutorMutex<string>({ queueType: "FIFO" });
   const resultsInOrder = new Array<string>();
 
   await taskExecutor.runMany([
@@ -44,7 +44,7 @@ test("taskExecutor: prevent concurrent task execution FIFO", async () => {
 });
 
 test("taskExecutor: prevent concurrent task execution LIFO", async () => {
-  const taskExecutor = new PromiseMutex<string>({ queueType: "LIFO" });
+  const taskExecutor = new TaskExecutorMutex<string>({ queueType: "LIFO" });
   const resultsInOrder = new Array<string>();
 
   await taskExecutor.runMany([
@@ -59,7 +59,7 @@ test("taskExecutor: prevent concurrent task execution LIFO", async () => {
 });
 
 test("taskExecutor: method run", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
   const resultsInOrder = new Array<string>();
 
   taskExecutor.run(() => task("A", 120, resultsInOrder));
@@ -74,7 +74,7 @@ test("taskExecutor: method run", async () => {
 });
 
 test("taskExecutor: listen 'task-started' even", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
   let taskStartedEventTriggered = false;
   taskExecutor.on("task-started", () => {
     taskStartedEventTriggered = true;
@@ -86,7 +86,7 @@ test("taskExecutor: listen 'task-started' even", async () => {
 });
 
 test("taskExecutor: event listener off", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
   let taskStartedEventTriggered = false;
   const lockAcquiredListener = () => {
     taskStartedEventTriggered = true;
@@ -100,7 +100,7 @@ test("taskExecutor: event listener off", async () => {
 });
 
 test("taskExecutor: listen 'task-finished' even", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
   let taskFinishedEventTriggered = false;
   taskExecutor.on("task-finished", () => {
     taskFinishedEventTriggered = true;
@@ -113,7 +113,7 @@ test("taskExecutor: listen 'task-finished' even", async () => {
 });
 
 test("taskExecutor: listen 'task-failure' even", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
   let taskFailureEventTriggered = false;
   let taskFailureErrorMessage: string | undefined;
   taskExecutor.on("task-failure", (taskEntry, error) => {
@@ -136,7 +136,7 @@ test("taskExecutor: listen 'task-failure' even", async () => {
 });
 
 test("taskExecutor: listen 'task-released-before-finished' even (release-timeout)", async () => {
-  const taskExecutor = new PromiseMutex<string>({ releaseTimeout: 10 });
+  const taskExecutor = new TaskExecutorMutex<string>({ releaseTimeout: 10 });
   let taskReleasedBeforeFinishedEventTriggered = false;
   let releaseReason: ReleaseBeforeFinishReason | undefined;
   taskExecutor.on("task-released-before-finished", (taskEntry) => {
@@ -156,7 +156,7 @@ test("taskExecutor: listen 'task-released-before-finished' even (release-timeout
 });
 
 test("taskExecutor: listen 'task-released-before-finished' even (forced)", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
   let taskReleasedBeforeFinishedEventTriggered = false;
   let releaseReason: ReleaseBeforeFinishReason | undefined;
   taskExecutor.on("task-released-before-finished", (taskEntry) => {
@@ -176,7 +176,7 @@ test("taskExecutor: listen 'task-released-before-finished' even (forced)", async
 });
 
 test("taskExecutor: listen 'task-discarded' even (timeoutReached)", async () => {
-  const taskExecutor = new PromiseMutex<string>({ waitingTimeout: 30 });
+  const taskExecutor = new TaskExecutorMutex<string>({ waitingTimeout: 30 });
   let taskDiscardedEventTriggered = false;
   let discardReason: DiscardReason | undefined;
   let discardedTaskArg: string | undefined;
@@ -205,7 +205,7 @@ test("taskExecutor: listen 'task-discarded' even (timeoutReached)", async () => 
 });
 
 test("taskExecutor: listen 'task-discarded' even (forced)", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
   let taskDiscardedEventTriggered = false;
   let discardReason: DiscardReason | undefined;
   let discardedTaskArg: string | undefined;
@@ -238,7 +238,7 @@ test("taskExecutor: listen 'task-discarded' even (forced)", async () => {
 test("taskExecutor: listen 'task-discarded' even (abortSignal)", async () => {
   const abortController = new AbortController();
 
-  const taskExecutor = new PromiseMutex<string>({ signal: abortController.signal });
+  const taskExecutor = new TaskExecutorMutex<string>({ signal: abortController.signal });
   let taskDiscardedEventTriggered = false;
   let discardReason: DiscardReason | undefined;
   let discardedTaskArg: string | undefined;
@@ -269,7 +269,7 @@ test("taskExecutor: listen 'task-discarded' even (abortSignal)", async () => {
 });
 
 test("taskExecutor: tryRun true", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
 
   const { available, run } = taskExecutor.tryRun((arg) => task(arg, 100), "A");
   if (available) {
@@ -281,7 +281,7 @@ test("taskExecutor: tryRun true", async () => {
 });
 
 test("taskExecutor: tryRun false (conncurrentLimitReached)", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
 
   const { available, run } = taskExecutor.tryRun((arg) => task(arg, 20), "A");
   if (available) {
@@ -294,7 +294,7 @@ test("taskExecutor: tryRun false (conncurrentLimitReached)", async () => {
 });
 
 test("taskExecutor: tryRun false (someOneIsWaitingTheLock)", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
 
   const { available, run } = taskExecutor.tryRun((arg) => task(arg, 20), "A");
   if (available) {
@@ -315,7 +315,7 @@ test("taskExecutor: releaseTimeoutHandler triggered", async () => {
     taskArg = taskEntry.arg;
   };
 
-  const taskExecutor = new PromiseMutex({ releaseTimeout: 50, releaseTimeoutHandler: timeoutHandler });
+  const taskExecutor = new TaskExecutorMutex({ releaseTimeout: 50, releaseTimeoutHandler: timeoutHandler });
   taskExecutor.run((arg) => task(arg, 100), "A");
 
   await setTimeout(70, undefined);
@@ -334,7 +334,7 @@ test("taskExecutor: releaseTimeoutHandler not triggered", async () => {
     timeoutHandlerTriggered = true;
   };
 
-  const taskExecutor = new PromiseMutex({ releaseTimeout: 100, releaseTimeoutHandler: timeoutHandler });
+  const taskExecutor = new TaskExecutorMutex({ releaseTimeout: 100, releaseTimeoutHandler: timeoutHandler });
   taskExecutor.run((arg) => task(arg, 200), "A");
 
   await setTimeout(70, undefined);
@@ -347,7 +347,7 @@ test("taskExecutor: listen 'error' event (release-timeout-handler-failure)", asy
     throw Error("unexpected error on timeoutHandler");
   };
 
-  const taskExecutor = new PromiseMutex({ releaseTimeout: 50, releaseTimeoutHandler: timeoutHandler });
+  const taskExecutor = new TaskExecutorMutex({ releaseTimeout: 50, releaseTimeoutHandler: timeoutHandler });
   let errorEventTriggered = false;
   let taskEventError: TaskEventError | undefined;
   let taskArg: string | undefined;
@@ -381,7 +381,7 @@ test("taskExecutor: waitingTimeoutHandler triggered", async () => {
     taskArg = taskEntry.arg;
   };
 
-  const taskExecutor = new PromiseMutex({ waitingTimeout: 50, waitingTimeoutHandler: timeoutHandler });
+  const taskExecutor = new TaskExecutorMutex({ waitingTimeout: 50, waitingTimeoutHandler: timeoutHandler });
   taskExecutor.run((arg) => task(arg, 60), "A");
   taskExecutor.run((arg) => task(arg, 100), "B");
 
@@ -402,7 +402,7 @@ test("taskExecutor: waitingTimeoutHandler not triggered", async () => {
     timeoutHandlerTriggered = true;
   };
 
-  const taskExecutor = new PromiseMutex({ waitingTimeout: 100, waitingTimeoutHandler: timeoutHandler });
+  const taskExecutor = new TaskExecutorMutex({ waitingTimeout: 100, waitingTimeoutHandler: timeoutHandler });
   taskExecutor.run((arg) => task(arg, 50), "A");
   taskExecutor.run((arg) => task(arg, 50), "B");
 
@@ -418,7 +418,7 @@ test("taskExecutor: waitingTimeoutHandler not triggered (flushPendingTasks)", as
     timeoutHandlerTriggered = true;
   };
 
-  const taskExecutor = new PromiseMutex({ waitingTimeout: 100, waitingTimeoutHandler: timeoutHandler });
+  const taskExecutor = new TaskExecutorMutex({ waitingTimeout: 100, waitingTimeoutHandler: timeoutHandler });
   taskExecutor.run((arg) => task(arg, 50), "A");
   taskExecutor.run((arg) => task(arg, 50), "B");
 
@@ -434,7 +434,7 @@ test("taskExecutor: listen 'error' event (waiting-timeout-handler-failure)", asy
     throw Error("unexpected error on timeoutHandler");
   };
 
-  const taskExecutor = new PromiseMutex({ waitingTimeout: 50, waitingTimeoutHandler: timeoutHandler });
+  const taskExecutor = new TaskExecutorMutex({ waitingTimeout: 50, waitingTimeoutHandler: timeoutHandler });
   let errorEventTriggered = false;
   let taskEventError: TaskEventError | undefined;
   let taskArg: string | undefined;
@@ -466,7 +466,7 @@ test("taskExecutor: listen 'error' event (error-handler-failure)", async () => {
     throw Error("unexpected error on timeoutHandler");
   };
 
-  const taskExecutor = new PromiseMutex({ errorHandler });
+  const taskExecutor = new TaskExecutorMutex({ errorHandler });
   let errorEventTriggered = false;
   let taskEventError: TaskEventError | undefined;
   let taskArg: string | undefined;
@@ -496,7 +496,7 @@ test("taskExecutor: listen 'error' event (error-handler-failure)", async () => {
 });
 
 test("taskExecutor: releaseRunningTasks (runningTasks > 0)", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
 
   taskExecutor.run(() => task("A", 100));
 
@@ -509,7 +509,7 @@ test("taskExecutor: releaseRunningTasks (runningTasks > 0)", async () => {
 });
 
 test("taskExecutor: releaseRunningTasks (runningTasks = 0)", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
 
   const runningTaskBeforeRelease = taskExecutor.runningTasks();
   taskExecutor.releaseRunningTasks();
@@ -520,7 +520,7 @@ test("taskExecutor: releaseRunningTasks (runningTasks = 0)", async () => {
 });
 
 test("taskExecutor: waitingTasks", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
 
   taskExecutor.run(() => task("A", 100));
   taskExecutor.run(() => task("B", 100));
@@ -534,7 +534,7 @@ test("taskExecutor: waitingTasks", async () => {
 });
 
 test("taskExecutor: flushPendingTasks (waitingTasks > 0)", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
 
   taskExecutor.run(() => task("A", 100));
   taskExecutor.run(() => task("B", 100));
@@ -548,7 +548,7 @@ test("taskExecutor: flushPendingTasks (waitingTasks > 0)", async () => {
 });
 
 test("taskExecutor: flushPendingTasks (waitingTasks = 0)", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
 
   const waitingTaskBeforeRelease = taskExecutor.waitingTasks();
   taskExecutor.flushPendingTasks();
@@ -559,7 +559,7 @@ test("taskExecutor: flushPendingTasks (waitingTasks = 0)", async () => {
 });
 
 test("taskExecutor: expiredTasks", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
 
   taskExecutor.run(() => task("A", 100));
 
@@ -572,7 +572,7 @@ test("taskExecutor: expiredTasks", async () => {
 });
 
 test("taskExecutor: changeConcurrentLimit (PromiseMutex)", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
 
   taskExecutor.run(() => task("A", 100));
 
@@ -585,7 +585,7 @@ test("taskExecutor: changeConcurrentLimit (PromiseMutex)", async () => {
 });
 
 test("taskExecutor: TaskOptions (waitingTimeout)", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
 
   let taskDiscardedEventTriggered = false;
   let discardReason: DiscardReason | undefined;
@@ -615,7 +615,7 @@ test("taskExecutor: TaskOptions (waitingTimeout)", async () => {
 });
 
 test("taskExecutor: TaskOptions (waitingTimeout, waitingTimeoutHandler)", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
 
   let timeoutHandlerTriggered = false;
   let taskArg: string | undefined;
@@ -638,7 +638,7 @@ test("taskExecutor: TaskOptions (waitingTimeout, waitingTimeoutHandler)", async 
 });
 
 test("taskExecutor: TaskOptions (errorHandler)", async () => {
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
 
   let errorEventTriggered = false;
   let taskArg: string | undefined;
@@ -681,7 +681,7 @@ test("taskExecutor: TaskOptions (releaseTimeout, releaseTimeoutHandler)", async 
     taskArg = taskEntry.arg;
   };
 
-  const taskExecutor = new PromiseMutex();
+  const taskExecutor = new TaskExecutorMutex();
   taskExecutor.run((arg) => task(arg, 100), "A", { releaseTimeout: 50, releaseTimeoutHandler: timeoutHandler });
 
   await setTimeout(70, undefined);
@@ -697,7 +697,7 @@ test("taskExecutor: TaskOptions (releaseTimeout, releaseTimeoutHandler)", async 
 test("taskExecutor: TaskOptions (signal)", async () => {
   const abortController = new AbortController();
 
-  const taskExecutor = new PromiseMutex<string>();
+  const taskExecutor = new TaskExecutorMutex<string>();
   let taskDiscardedEventTriggered = false;
   let discardReason: DiscardReason | undefined;
   let discardedTaskArg: string | undefined;

@@ -1,20 +1,19 @@
-# Tasktly
 [![Coverage Status](https://coveralls.io/repos/github/alan-plus/tasktly/badge.svg?branch=development)](https://coveralls.io/github/alan-plus/tasktly?branch=development)
-A set of classes that provide assistance with the concurrent control of asynchronous functions.
+# Tasktly
+A set of classes that provide assistance with the concurrent access to shared resources and the control of asynchronous task.
 - Locks
   - [LockMutex](#LockMutex): a lock class to prevent concurrent access to a resource.
   - [LockPool](#LockPool): alternative lock class that allows limited concurrent access to a resource.
 - Task Executors
-  - [PromiseMutex](#PromiseMutex): a class to prevent concurrent task execution.
-  - [PromisePool](#PromisePool): allows limited concurrent task execution.
-  - [PromiseMultiStep](#PromiseMultiStep): allows the concurrency of each step to be adjusted.
+  - [TaskExecutorMutex](#TaskExecutorMutex): a class to prevent concurrent task execution.
+  - [TaskExecutorPool](#TaskExecutorPool): allows limited concurrent task execution.
+  - [TaskExecutorMultiStep](#TaskExecutorMultiStep): allows the concurrency of each step to be adjusted.
 
 ## Getting started
 ### Installation:
 ```
 npm install tasktly
 ```
-
 ### LockMutex
 Provides a mechanism to prevents concurrent access to a resource.
 #### Constructor
@@ -41,14 +40,14 @@ async function sample () {
   }
 }
 ```
-
 ### LockPool
-Use instances of LockPool to allow limited concurrent access to a resource.
+Provides a mechanism to allow limited concurrent access to a resource.
 #### Constructor
 `new LockPool({ concurrentLimit: number })`
 #### LockPoolOptions
 [LockOptions](#LockOptions) +
 - `concurrentLimit` (number, default: 1) max concurrent access to the resource.
+#### How to use
 ```js
 import { LockPool } from "tasktly";
 
