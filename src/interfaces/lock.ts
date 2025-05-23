@@ -1,5 +1,8 @@
 import { TryAcquireResponse, LockEvent, ReleaseFunction } from "../types/lock.type";
 
+/**
+ * Lock interface
+ */
 export interface ILock {
   /**
    * Acquires the lock
@@ -11,11 +14,13 @@ export interface ILock {
   /**
    * Acquires the lock only if one is available at the time of invocation.
    *
+   * @returns {TryAcquireResponse}
    */
   tryAcquire(): TryAcquireResponse;
 
   /**
    * Indicates if the lock is currently available
+   *
    */
   isAvailable(): boolean;
 

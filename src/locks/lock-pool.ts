@@ -1,6 +1,6 @@
 import { EventEmitter } from "events";
 import { ILock } from "../interfaces/lock";
-import { LockEvent, LockEventError, PoolLockOptions, ReleaseFunction, TryAcquireResponse } from "../types/lock.type";
+import { LockEvent, LockEventError, LockPoolOptions, ReleaseFunction, TryAcquireResponse } from "../types/lock.type";
 import { OptionsSanitizerUtils } from "../utils/options-sanitizer.utils";
 
 type InternalReleaseFunction = ReleaseFunction & { (timeoutReached?: boolean): void };
@@ -10,20 +10,20 @@ type WaitingLock = {
 };
 type AcquiredLock = { releaseTimeoutId?: NodeJS.Timeout };
 
-const defaultOptions: Required<PoolLockOptions> = {
+const defaultOptions: Required<LockPoolOptions> = {
   concurrentLimit: 1,
   queueType: "FIFO",
   releaseTimeout: 0,
   releaseTimeoutHandler: () => {},
-} satisfies PoolLockOptions;
+} satisfies LockPoolOptions;
 
 export class LockPool implements ILock {
-  private readonly options: Required<PoolLockOptions>;
+  private readonly options: Required<LockPoolOptions>;
   private readonly waitingQueue = new Array<WaitingLock>();
   private readonly acquiredQueue = new Map<AcquiredLock, ReleaseFunction>();
   private readonly internalEmitter = new EventEmitter();
 
-  constructor(options?: PoolLockOptions) {
+  constructor(options?: LockPoolOptions) {
     this.options = this.sanitizeOptions(options);
   }
 
@@ -149,7 +149,7 @@ export class LockPool implements ILock {
     return lockEntry;
   }
 
-  private sanitizeOptions(options?: PoolLockOptions): Required<PoolLockOptions> {
+  private sanitizeOptions(options?: LockPoolOptions): Required<LockPoolOptions> {
     if (options) {
       const sanitizedConcurrentLimit = OptionsSanitizerUtils.sanitizeNumberToPositiveGraterThanZeroInteger(options.concurrentLimit);
       if (sanitizedConcurrentLimit === undefined) {

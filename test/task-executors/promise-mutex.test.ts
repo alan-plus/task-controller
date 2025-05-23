@@ -576,9 +576,9 @@ test("taskExecutor: changeConcurrentLimit (PromiseMutex)", async () => {
 
   taskExecutor.run(() => task("A", 100));
 
-  const runningLimitReachedBeforeChangeConcurrentLimit = taskExecutor.isRunningLimitReached();
+  const runningLimitReachedBeforeChangeConcurrentLimit = !taskExecutor.isAvailable();
   taskExecutor.changeConcurrentLimit(2);
-  const runningLimitReachedAfterChangeConcurrentLimit = taskExecutor.isRunningLimitReached();
+  const runningLimitReachedAfterChangeConcurrentLimit = !taskExecutor.isAvailable();
 
   expect(runningLimitReachedBeforeChangeConcurrentLimit).toBe(true);
   expect(runningLimitReachedAfterChangeConcurrentLimit).toBe(true);

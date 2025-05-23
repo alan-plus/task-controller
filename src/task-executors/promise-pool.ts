@@ -115,9 +115,9 @@ export class PromisePool<T> implements TaskExecutor<T> {
     }
   }
 
-  public isRunningLimitReached(): boolean {
+  public isAvailable(): boolean {
     const conncurrentLimitReached = this.runningQueue.size >= this.options.concurrentLimit;
-    return conncurrentLimitReached;
+    return !conncurrentLimitReached;
   }
 
   public changeConcurrentLimit(newConcurrentLimit: number): void {
@@ -207,7 +207,7 @@ export class PromisePool<T> implements TaskExecutor<T> {
   }
 
   private dispatchNextTask(): void {
-    if (this.isRunningLimitReached()) {
+    if (!this.isAvailable()) {
       return;
     }
 

@@ -91,9 +91,9 @@ test("taskExecutor: changeConcurrentLimit (PromisePool)", async () => {
   const taskExecutor = new PromisePool<string>({ concurrentLimit: 1 });
   taskExecutor.run(() => task("A", 120));
 
-  const runningLimitReachedBeforeChangeConcurrentLimit = taskExecutor.isRunningLimitReached();
+  const runningLimitReachedBeforeChangeConcurrentLimit = !taskExecutor.isAvailable();
   taskExecutor.changeConcurrentLimit(2);
-  const runningLimitReachedAfterChangeConcurrentLimit = taskExecutor.isRunningLimitReached();
+  const runningLimitReachedAfterChangeConcurrentLimit = !taskExecutor.isAvailable();
 
   expect(runningLimitReachedBeforeChangeConcurrentLimit).toBe(true);
   expect(runningLimitReachedAfterChangeConcurrentLimit).toBe(false);
@@ -102,9 +102,9 @@ test("taskExecutor: changeConcurrentLimit (PromisePool)", async () => {
 test("taskExecutor: concurrentLimit (NaN)", async () => {
   const taskExecutor = new PromisePool<string>({ concurrentLimit: NaN });
 
-  const runningLimitReachedBeforeRuntask = taskExecutor.isRunningLimitReached();
+  const runningLimitReachedBeforeRuntask = !taskExecutor.isAvailable();
   taskExecutor.run(() => task("A", 120));
-  const runningLimitReachedAfterRuntask = taskExecutor.isRunningLimitReached();
+  const runningLimitReachedAfterRuntask = !taskExecutor.isAvailable();
 
   expect(runningLimitReachedBeforeRuntask).toBe(false);
   expect(runningLimitReachedAfterRuntask).toBe(true);
@@ -113,9 +113,9 @@ test("taskExecutor: concurrentLimit (NaN)", async () => {
 test("taskExecutor: concurrentLimit (Infinity)", async () => {
   const taskExecutor = new PromisePool<string>({ concurrentLimit: Infinity });
 
-  const runningLimitReachedBeforeRuntask = taskExecutor.isRunningLimitReached();
+  const runningLimitReachedBeforeRuntask = !taskExecutor.isAvailable();
   taskExecutor.run(() => task("A", 120));
-  const runningLimitReachedAfterRuntask = taskExecutor.isRunningLimitReached();
+  const runningLimitReachedAfterRuntask = !taskExecutor.isAvailable();
 
   expect(runningLimitReachedBeforeRuntask).toBe(false);
   expect(runningLimitReachedAfterRuntask).toBe(true);
@@ -124,9 +124,9 @@ test("taskExecutor: concurrentLimit (Infinity)", async () => {
 test("taskExecutor: concurrentLimit (Infinity)", async () => {
   const taskExecutor = new PromisePool<string>({ concurrentLimit: 0.9 });
 
-  const runningLimitReachedBeforeRuntask = taskExecutor.isRunningLimitReached();
+  const runningLimitReachedBeforeRuntask = !taskExecutor.isAvailable();
   taskExecutor.run(() => task("A", 120));
-  const runningLimitReachedAfterRuntask = taskExecutor.isRunningLimitReached();
+  const runningLimitReachedAfterRuntask = !taskExecutor.isAvailable();
 
   expect(runningLimitReachedBeforeRuntask).toBe(false);
   expect(runningLimitReachedAfterRuntask).toBe(true);
@@ -136,9 +136,9 @@ test("taskExecutor: changeConcurrentLimit (null)", async () => {
   const taskExecutor = new PromisePool<string>();
   taskExecutor.changeConcurrentLimit(null as unknown as number);
 
-  const runningLimitReachedBeforeRuntask = taskExecutor.isRunningLimitReached();
+  const runningLimitReachedBeforeRuntask = !taskExecutor.isAvailable();
   taskExecutor.run(() => task("A", 120));
-  const runningLimitReachedAfterRuntask = taskExecutor.isRunningLimitReached();
+  const runningLimitReachedAfterRuntask = !taskExecutor.isAvailable();
 
   expect(runningLimitReachedBeforeRuntask).toBe(false);
   expect(runningLimitReachedAfterRuntask).toBe(true);
@@ -148,9 +148,9 @@ test("taskExecutor: changeConcurrentLimit (NaN)", async () => {
   const taskExecutor = new PromisePool<string>();
   taskExecutor.changeConcurrentLimit(NaN);
 
-  const runningLimitReachedBeforeRuntask = taskExecutor.isRunningLimitReached();
+  const runningLimitReachedBeforeRuntask = !taskExecutor.isAvailable();
   taskExecutor.run(() => task("A", 120));
-  const runningLimitReachedAfterRuntask = taskExecutor.isRunningLimitReached();
+  const runningLimitReachedAfterRuntask = !taskExecutor.isAvailable();
 
   expect(runningLimitReachedBeforeRuntask).toBe(false);
   expect(runningLimitReachedAfterRuntask).toBe(true);
@@ -160,9 +160,9 @@ test("taskExecutor: changeConcurrentLimit (0)", async () => {
   const taskExecutor = new PromisePool<string>();
   taskExecutor.changeConcurrentLimit(0);
 
-  const runningLimitReachedBeforeRuntask = taskExecutor.isRunningLimitReached();
+  const runningLimitReachedBeforeRuntask = !taskExecutor.isAvailable();
   taskExecutor.run(() => task("A", 120));
-  const runningLimitReachedAfterRuntask = taskExecutor.isRunningLimitReached();
+  const runningLimitReachedAfterRuntask = !taskExecutor.isAvailable();
 
   expect(runningLimitReachedBeforeRuntask).toBe(false);
   expect(runningLimitReachedAfterRuntask).toBe(true);

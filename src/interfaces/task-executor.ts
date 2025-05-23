@@ -8,7 +8,7 @@ export interface TaskExecutor<T> {
   flushPendingTasks(): void;
   on(event: TaskEvent, listener: (taskEntry: TaskEntry, ...args: any[]) => void): TaskExecutor<T>;
   off(event: TaskEvent, listener: (taskEntry: TaskEntry, ...args: any[]) => void): TaskExecutor<T>;
-  isRunningLimitReached(): boolean;
+  isAvailable(): boolean;
   changeConcurrentLimit(newConcurrentLimit: number): void;
   waitingTasks(): number;
   runningTasks(): number;
