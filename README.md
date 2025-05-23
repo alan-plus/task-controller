@@ -1,5 +1,5 @@
-[![Coverage Status](https://coveralls.io/repos/github/alan-plus/tasktly/badge.svg?branch=development)](https://coveralls.io/github/alan-plus/tasktly?branch=development)
-# Tasktly
+[![Coverage Status](https://coveralls.io/repos/github/alan-plus/task-controller/badge.svg?branch=development)](https://coveralls.io/github/alan-plus/task-controller?branch=development)
+# Task Controller
 A set of classes that provide assistance with the concurrent access to shared resources and the control of asynchronous task.
 - Locks
   - [LockMutex](#LockMutex): a lock class to prevent concurrent access to a resource.
@@ -12,7 +12,7 @@ A set of classes that provide assistance with the concurrent access to shared re
 ## Getting started
 ### Installation:
 ```
-npm install tasktly
+npm install task-controller
 ```
 ### LockMutex
 Provides a mechanism to prevents concurrent access to a resource.
@@ -26,7 +26,7 @@ Provides a mechanism to prevents concurrent access to a resource.
 - `releaseTimeoutHandler` (defaults: undefined) function to handle releaseTimeout event.
 #### How to use
 ```js
-import { LockMutex } from "tasktly";
+import { LockMutex } from "task-controller";
 
 const lock = new LockMutex();
 
@@ -49,7 +49,7 @@ Provides a mechanism to allow limited concurrent access to a resource.
 - `concurrentLimit` (number, default: 1) max concurrent access to the resource.
 #### How to use
 ```js
-import { LockPool } from "tasktly";
+import { LockPool } from "task-controller";
 
   // concurrent access to the resource limited to 2
   const lock = new LockPool({ concurrentLimit: 2 }); 
