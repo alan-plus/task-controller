@@ -1,5 +1,5 @@
 import { setTimeout } from "timers/promises";
-import { PromisePool } from "../../src/task-executors/promise-pool";
+import { TaskExecutorPool } from "../../src/task-executors/task-executor-pool";
 
 function task(result: string, timeout: number, resultsInOrder?: string[]): Promise<string> {
   return new Promise<string>(async (resolve, reject) => {
@@ -14,7 +14,7 @@ function task(result: string, timeout: number, resultsInOrder?: string[]): Promi
 }
 
 test("taskExecutor: allow limited concurrent task execution", async () => {
-  const taskExecutor = new PromisePool<string>({ concurrentLimit: 2 });
+  const taskExecutor = new TaskExecutorPool<string>({ concurrentLimit: 2 });
   const resultsInOrder = new Array<string>();
 
   await taskExecutor.runMany([
@@ -29,7 +29,7 @@ test("taskExecutor: allow limited concurrent task execution", async () => {
 });
 
 test("taskExecutor: runMany arguments", async () => {
-  const taskExecutor = new PromisePool<string>({ concurrentLimit: 2 });
+  const taskExecutor = new TaskExecutorPool<string>({ concurrentLimit: 2 });
   const resultsInOrder = new Array<string>();
 
   await taskExecutor.runMany(
@@ -43,7 +43,7 @@ test("taskExecutor: runMany arguments", async () => {
 });
 
 test("taskExecutor: default options", async () => {
-  const taskExecutor = new PromisePool<string>();
+  const taskExecutor = new TaskExecutorPool<string>();
   const resultsInOrder = new Array<string>();
 
   await taskExecutor.runMany([
@@ -58,7 +58,7 @@ test("taskExecutor: default options", async () => {
 });
 
 test("taskExecutor: invalid options", async () => {
-  const taskExecutor = new PromisePool<string>({ concurrentLimit: "5" } as any);
+  const taskExecutor = new TaskExecutorPool<string>({ concurrentLimit: "5" } as any);
   const resultsInOrder = new Array<string>();
 
   await taskExecutor.runMany([
@@ -73,7 +73,7 @@ test("taskExecutor: invalid options", async () => {
 });
 
 test("taskExecutor: method run", async () => {
-  const taskExecutor = new PromisePool<string>({ concurrentLimit: 2 });
+  const taskExecutor = new TaskExecutorPool<string>({ concurrentLimit: 2 });
   const resultsInOrder = new Array<string>();
 
   taskExecutor.run(() => task("A", 120, resultsInOrder));
@@ -87,8 +87,8 @@ test("taskExecutor: method run", async () => {
   expect(resultsInOrder[2]).toBe("A");
 });
 
-test("taskExecutor: changeConcurrentLimit (PromisePool)", async () => {
-  const taskExecutor = new PromisePool<string>({ concurrentLimit: 1 });
+test("taskExecutor: changeConcurrentLimit (PoolExecutor)", async () => {
+  const taskExecutor = new TaskExecutorPool<string>({ concurrentLimit: 1 });
   taskExecutor.run(() => task("A", 120));
 
   const runningLimitReachedBeforeChangeConcurrentLimit = !taskExecutor.isAvailable();
@@ -100,7 +100,7 @@ test("taskExecutor: changeConcurrentLimit (PromisePool)", async () => {
 });
 
 test("taskExecutor: concurrentLimit (NaN)", async () => {
-  const taskExecutor = new PromisePool<string>({ concurrentLimit: NaN });
+  const taskExecutor = new TaskExecutorPool<string>({ concurrentLimit: NaN });
 
   const runningLimitReachedBeforeRuntask = !taskExecutor.isAvailable();
   taskExecutor.run(() => task("A", 120));
@@ -111,7 +111,7 @@ test("taskExecutor: concurrentLimit (NaN)", async () => {
 });
 
 test("taskExecutor: concurrentLimit (Infinity)", async () => {
-  const taskExecutor = new PromisePool<string>({ concurrentLimit: Infinity });
+  const taskExecutor = new TaskExecutorPool<string>({ concurrentLimit: Infinity });
 
   const runningLimitReachedBeforeRuntask = !taskExecutor.isAvailable();
   taskExecutor.run(() => task("A", 120));
@@ -122,7 +122,7 @@ test("taskExecutor: concurrentLimit (Infinity)", async () => {
 });
 
 test("taskExecutor: concurrentLimit (Infinity)", async () => {
-  const taskExecutor = new PromisePool<string>({ concurrentLimit: 0.9 });
+  const taskExecutor = new TaskExecutorPool<string>({ concurrentLimit: 0.9 });
 
   const runningLimitReachedBeforeRuntask = !taskExecutor.isAvailable();
   taskExecutor.run(() => task("A", 120));
@@ -133,7 +133,7 @@ test("taskExecutor: concurrentLimit (Infinity)", async () => {
 });
 
 test("taskExecutor: changeConcurrentLimit (null)", async () => {
-  const taskExecutor = new PromisePool<string>();
+  const taskExecutor = new TaskExecutorPool<string>();
   taskExecutor.changeConcurrentLimit(null as unknown as number);
 
   const runningLimitReachedBeforeRuntask = !taskExecutor.isAvailable();
@@ -145,7 +145,7 @@ test("taskExecutor: changeConcurrentLimit (null)", async () => {
 });
 
 test("taskExecutor: changeConcurrentLimit (NaN)", async () => {
-  const taskExecutor = new PromisePool<string>();
+  const taskExecutor = new TaskExecutorPool<string>();
   taskExecutor.changeConcurrentLimit(NaN);
 
   const runningLimitReachedBeforeRuntask = !taskExecutor.isAvailable();
@@ -157,7 +157,7 @@ test("taskExecutor: changeConcurrentLimit (NaN)", async () => {
 });
 
 test("taskExecutor: changeConcurrentLimit (0)", async () => {
-  const taskExecutor = new PromisePool<string>();
+  const taskExecutor = new TaskExecutorPool<string>();
   taskExecutor.changeConcurrentLimit(0);
 
   const runningLimitReachedBeforeRuntask = !taskExecutor.isAvailable();

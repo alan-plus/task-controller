@@ -1,10 +1,10 @@
 import { LockMutex } from "./locks/lock-mutex";
 import { LockPool } from "./locks/lock-pool";
-import { PromiseMutex } from "./task-executors/promise-mutex";
-import { PromisePool } from "./task-executors/promise-pool";
-import { PromiseMultiStep } from "./task-executors/promise-multi-step";
+import { TaskExecutorMutex } from "./task-executors/task-executor-mutex";
+import { TaskExecutorPool } from "./task-executors/task-executor-pool";
+import { TaskExecutorMultiStep } from "./task-executors/task-executor-multi-step";
 
-export { LockMutex, LockPool, PromiseMutex, PromisePool, PromiseMultiStep };
+export { LockMutex, LockPool, TaskExecutorMutex, TaskExecutorPool, TaskExecutorMultiStep };
 export * from "./types/lock.type";
 export * from "./types/task-executor.type";
 export * from "./interfaces/lock";

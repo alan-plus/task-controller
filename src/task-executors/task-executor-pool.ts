@@ -1,7 +1,7 @@
 import { TaskExecutor } from "../interfaces/task-executor";
 import { EventEmitter } from "events";
 import {
-  PromisePoolOptions,
+  TaskExecutorPoolOptions,
   ReleaseBeforeFinishReason,
   TaskEntry,
   TaskEvent,
@@ -23,7 +23,7 @@ type AcquireResponse = {
   taskEntry: TaskEntry;
 };
 
-const defaultOptions: Required<PromisePoolOptions> = {
+const defaultOptions: Required<TaskExecutorPoolOptions> = {
   concurrentLimit: 1,
   queueType: "FIFO",
   releaseTimeout: 0,
@@ -32,16 +32,16 @@ const defaultOptions: Required<PromisePoolOptions> = {
   waitingTimeoutHandler: () => {},
   errorHandler: () => {},
   signal: { aborted: false } as AbortSignal,
-} satisfies PromisePoolOptions;
+} satisfies TaskExecutorPoolOptions;
 
-export class PromisePool<T> implements TaskExecutor<T> {
-  private readonly options: Required<PromisePoolOptions>;
+export class TaskExecutorPool<T> implements TaskExecutor<T> {
+  private readonly options: Required<TaskExecutorPoolOptions>;
   private readonly waitingQueue = new Array<WaitingTask>();
   private readonly runningQueue = new Map<RunningTask, TaskExecutorReleaseFunction>();
   private readonly expiredQueue = new Set<RunningTask>();
   private readonly internalEmitter = new EventEmitter();
 
-  constructor(options?: PromisePoolOptions) {
+  constructor(options?: TaskExecutorPoolOptions) {
     this.options = this.sanitizeOptions(options);
   }
 
@@ -308,7 +308,7 @@ export class PromisePool<T> implements TaskExecutor<T> {
     return taskEntry;
   }
 
-  private sanitizeOptions(options?: PromisePoolOptions): Required<PromisePoolOptions> {
+  private sanitizeOptions(options?: TaskExecutorPoolOptions): Required<TaskExecutorPoolOptions> {
     if (options) {
       const sanitizedConcurrentLimit = OptionsSanitizerUtils.sanitizeNumberToPositiveGraterThanZeroInteger(options.concurrentLimit);
       if (sanitizedConcurrentLimit === undefined) {

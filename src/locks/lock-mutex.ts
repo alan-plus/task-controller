@@ -19,7 +19,7 @@ import { LockOptions, LockPoolOptions } from "../types/lock.type";
  * }
  * ```
  * @since v1.0.0
- * @see [source](https://github.com/alan-plus/tasktly/blob/main/src/locks/lock-mutex.ts)
+ * @see [source](https://github.com/alan-plus/tasktly/blob/v1.0.0/src/locks/lock-mutex.ts)
  */
 export class LockMutex extends LockPool {
   /**

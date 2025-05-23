@@ -17,12 +17,63 @@ const defaultOptions: Required<LockPoolOptions> = {
   releaseTimeoutHandler: () => {},
 } satisfies LockPoolOptions;
 
+/**
+ * The LockPool class can be used to allow limited concurrent access to a resource.
+ * ```js
+ * import { LockPool } from "tasktly";
+ * 
+ *   // concurrent access to the resource limited to 2
+ *   const lock = new LockPool({ concurrentLimit: 2 }); 
+ * 
+ *   await Promise.all([
+ *     
+ *     // Task 1 (will access the resource immediately)
+ *     new Promise<any>(async (resolve) => {
+ *       const release = await lock.acquire();
+ *       try {
+ *         // access the protected resource
+ *         resolve();
+ *       } finally {
+ *         release();
+ *       }
+ *     }),
+ * 
+ *     // Task 2 (will access the resource immediately)
+ *     new Promise<any>(async (resolve) => {
+ *       const release = await lock.acquire();
+ *       try {
+ *         // access the protected resource
+ *         resolve();
+ *       } finally {
+ *         release();
+ *       }
+ *     }),
+ * 
+ *     // Task 3 (will access the resource once 'Task 1' or 'Task 2' is completed)
+ *     new Promise<any>(async (resolve) => {
+ *       const release = await lock.acquire();
+ *       try {
+ *         // access the protected resource
+ *         resolve();
+ *       } finally {
+ *         release();
+ *       }
+ *     }),
+ *   ]);
+ * ```
+ * @since v1.0.0
+ * @see [source](https://github.com/alan-plus/tasktly/blob/v1.0.0/src/locks/lock-pool.ts)
+ */
 export class LockPool implements ILock {
   private readonly options: Required<LockPoolOptions>;
   private readonly waitingQueue = new Array<WaitingLock>();
   private readonly acquiredQueue = new Map<AcquiredLock, ReleaseFunction>();
   private readonly internalEmitter = new EventEmitter();
 
+  /**
+   * Creates a new LockPool instance.
+   * @param options {LockPoolOptions}.
+   */
   constructor(options?: LockPoolOptions) {
     this.options = this.sanitizeOptions(options);
   }
