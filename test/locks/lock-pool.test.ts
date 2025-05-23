@@ -1,11 +1,12 @@
 import { setTimeout } from "timers/promises";
 import { LockPool } from "../../src/locks/lock-pool";
-import { Lock, ReleaseFunction } from "../../src/interfaces/lock";
+import { ILock } from "../../src/interfaces/lock";
+import { ReleaseFunction } from "../../src/types/lock.type";
 
 class Task {
   constructor(
     private readonly result: string,
-    private readonly lock?: Lock
+    private readonly lock?: ILock
   ) {}
 
   public async run(timeout: number, resultsInOrder: string[]): Promise<string> {
@@ -87,7 +88,11 @@ test("lock pool: default options", async () => {
 test("lock pool: invalid options", async () => {
   const lock = new LockPool({ concurrentLimit: "5" } as any);
   const resultsInOrder = new Array<string>();
-  const promisesWithLock = [new Task("A", lock).run(120, resultsInOrder), new Task("B", lock).run(60, resultsInOrder), new Task("C", lock).run(10, resultsInOrder)];
+  const promisesWithLock = [
+    new Task("A", lock).run(120, resultsInOrder),
+    new Task("B", lock).run(60, resultsInOrder),
+    new Task("C", lock).run(10, resultsInOrder),
+  ];
 
   await Promise.all(promisesWithLock);
 
@@ -149,9 +154,9 @@ test("lock: releaseAcquiredLocks method (concurrent 3, running 3, waiting: 0)", 
   lock.acquire();
   lock.acquire();
 
-  const isLockedBeforeReleaseAll = lock.isLockLimitReached();
+  const isLockedBeforeReleaseAll = !lock.isAvailable();
   lock.releaseAcquiredLocks();
-  const isLockedAfterReleaseAll = lock.isLockLimitReached();
+  const isLockedAfterReleaseAll = !lock.isAvailable();
 
   expect(isLockedBeforeReleaseAll).toBe(true);
   expect(isLockedAfterReleaseAll).toBe(false);
@@ -162,9 +167,9 @@ test("lock: releaseAcquiredLocks method (concurrent 1, running 1, waiting: 1)", 
   lock.acquire();
   lock.acquire();
 
-  const isLockedBeforeReleaseAll = lock.isLockLimitReached();
+  const isLockedBeforeReleaseAll = !lock.isAvailable();
   lock.releaseAcquiredLocks();
-  const isLockedAfterReleaseAll = lock.isLockLimitReached();
+  const isLockedAfterReleaseAll = !lock.isAvailable();
 
   expect(isLockedBeforeReleaseAll).toBe(true);
   expect(isLockedAfterReleaseAll).toBe(true);
@@ -173,9 +178,9 @@ test("lock: releaseAcquiredLocks method (concurrent 1, running 1, waiting: 1)", 
 test("lock: releaseAcquiredLocks method (concurrent 1, running 0, waiting: 0)", async () => {
   const lock = new LockPool({ concurrentLimit: 1 });
 
-  const isLockedBeforeReleaseAll = lock.isLockLimitReached();
+  const isLockedBeforeReleaseAll = !lock.isAvailable();
   lock.releaseAcquiredLocks();
-  const isLockedAfterReleaseAll = lock.isLockLimitReached();
+  const isLockedAfterReleaseAll = !lock.isAvailable();
 
   expect(isLockedBeforeReleaseAll).toBe(false);
   expect(isLockedAfterReleaseAll).toBe(false);

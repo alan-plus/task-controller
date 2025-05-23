@@ -1,7 +1,6 @@
 import { setTimeout } from "timers/promises";
 import { PromiseMutex } from "../../src/task-executors/promise-mutex";
-import { DiscardReason, ReleaseBeforeFinishReason, TaskEventError } from "../../src/types/task-executor.type";
-import { TaskEntry } from "../../src/interfaces/task-executor";
+import { DiscardReason, ReleaseBeforeFinishReason, TaskEntry, TaskEventError } from "../../src/types/task-executor.type";
 
 function task(result: string, timeout: number, resultsInOrder?: string[]): Promise<string> {
   return new Promise<string>(async (resolve, reject) => {
@@ -577,9 +576,9 @@ test("taskExecutor: changeConcurrentLimit (PromiseMutex)", async () => {
 
   taskExecutor.run(() => task("A", 100));
 
-  const runningLimitReachedBeforeChangeConcurrentLimit = taskExecutor.isRunningLimitReached();
+  const runningLimitReachedBeforeChangeConcurrentLimit = !taskExecutor.isAvailable();
   taskExecutor.changeConcurrentLimit(2);
-  const runningLimitReachedAfterChangeConcurrentLimit = taskExecutor.isRunningLimitReached();
+  const runningLimitReachedAfterChangeConcurrentLimit = !taskExecutor.isAvailable();
 
   expect(runningLimitReachedBeforeChangeConcurrentLimit).toBe(true);
   expect(runningLimitReachedAfterChangeConcurrentLimit).toBe(true);

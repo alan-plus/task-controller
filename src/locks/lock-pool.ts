@@ -1,26 +1,29 @@
 import { EventEmitter } from "events";
-import { AcquiredLock, Lock, ReleaseFunction, WaitingLock } from "../interfaces/lock";
-import { LockEvent, LockEventError, PoolLockOptions, TryAcquireResponse } from "../types/lock.type";
+import { ILock } from "../interfaces/lock";
+import { LockEvent, LockEventError, LockPoolOptions, ReleaseFunction, TryAcquireResponse } from "../types/lock.type";
 import { OptionsSanitizerUtils } from "../utils/options-sanitizer.utils";
 
-interface InternalReleaseFunction extends ReleaseFunction {
-  (timeoutReached?: boolean): void;
-}
+type InternalReleaseFunction = ReleaseFunction & { (timeoutReached?: boolean): void };
+type WaitingLock = {
+  resolve(result: ReleaseFunction): void;
+  reject(reason?: any): void;
+};
+type AcquiredLock = { releaseTimeoutId?: NodeJS.Timeout };
 
-const defaultOptions: Required<PoolLockOptions> = {
+const defaultOptions: Required<LockPoolOptions> = {
   concurrentLimit: 1,
   queueType: "FIFO",
   releaseTimeout: 0,
   releaseTimeoutHandler: () => {},
-} satisfies PoolLockOptions;
+} satisfies LockPoolOptions;
 
-export class LockPool implements Lock {
-  private readonly options: Required<PoolLockOptions>;
+export class LockPool implements ILock {
+  private readonly options: Required<LockPoolOptions>;
   private readonly waitingQueue = new Array<WaitingLock>();
   private readonly acquiredQueue = new Map<AcquiredLock, ReleaseFunction>();
   private readonly internalEmitter = new EventEmitter();
 
-  constructor(options?: PoolLockOptions) {
+  constructor(options?: LockPoolOptions) {
     this.options = this.sanitizeOptions(options);
   }
 
@@ -58,9 +61,9 @@ export class LockPool implements Lock {
     return { acquired: true, release: releaseFunction };
   }
 
-  public isLockLimitReached(): boolean {
+  public isAvailable(): boolean {
     const conncurrentLimitReached = this.acquiredQueue.size >= this.options.concurrentLimit;
-    return conncurrentLimitReached;
+    return !conncurrentLimitReached;
   }
 
   public releaseAcquiredLocks(): void {
@@ -118,7 +121,7 @@ export class LockPool implements Lock {
   }
 
   private dispatchNextLock(): void {
-    if (this.isLockLimitReached()) {
+    if (!this.isAvailable()) {
       return;
     }
 
@@ -146,7 +149,7 @@ export class LockPool implements Lock {
     return lockEntry;
   }
 
-  private sanitizeOptions(options?: PoolLockOptions): Required<PoolLockOptions> {
+  private sanitizeOptions(options?: LockPoolOptions): Required<LockPoolOptions> {
     if (options) {
       const sanitizedConcurrentLimit = OptionsSanitizerUtils.sanitizeNumberToPositiveGraterThanZeroInteger(options.concurrentLimit);
       if (sanitizedConcurrentLimit === undefined) {

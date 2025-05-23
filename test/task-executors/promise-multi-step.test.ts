@@ -1,14 +1,14 @@
 import { setTimeout } from "timers/promises";
 import { PromiseMultiStep } from "../../src/task-executors/promise-multi-step";
-import { Lock } from "../../src/interfaces/lock";
+import { ILock } from "../../src/interfaces/lock";
 
 function task(
   result: string,
   timeout: number,
   stepResultsArray: string[][] | null,
-  stepLock1: Lock,
-  stepLock2: Lock,
-  stepLock3: Lock
+  stepLock1: ILock,
+  stepLock2: ILock,
+  stepLock3: ILock
 ): Promise<string> {
   return new Promise<string>(async (resolve, reject) => {
     const release1 = await stepLock1.acquire();
@@ -56,9 +56,9 @@ test("promise multi step: prevent or allow limited concurrent step execution", a
   stepResultsArray.push(resultsStep3);
 
   await taskExecutor.runMany([
-    (stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) => task("A", 140, stepResultsArray, stepLock1, stepLock2, stepLock3),
-    (stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) => task("B", 40, stepResultsArray, stepLock1, stepLock2, stepLock3),
-    (stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) => task("C", 5, stepResultsArray, stepLock1, stepLock2, stepLock3),
+    (stepLock1: ILock, stepLock2: ILock, stepLock3: ILock) => task("A", 140, stepResultsArray, stepLock1, stepLock2, stepLock3),
+    (stepLock1: ILock, stepLock2: ILock, stepLock3: ILock) => task("B", 40, stepResultsArray, stepLock1, stepLock2, stepLock3),
+    (stepLock1: ILock, stepLock2: ILock, stepLock3: ILock) => task("C", 5, stepResultsArray, stepLock1, stepLock2, stepLock3),
   ]);
 
   expect(resultsStep1[0]).toBe("A");
@@ -84,11 +84,15 @@ test("promise multi step: method run", async () => {
   stepResultsArray.push(resultsStep2);
   stepResultsArray.push(resultsStep3);
 
-  taskExecutor.run((stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) =>
+  taskExecutor.run((stepLock1: ILock, stepLock2: ILock, stepLock3: ILock) =>
     task("A", 140, stepResultsArray, stepLock1, stepLock2, stepLock3)
   );
-  taskExecutor.run((stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) => task("B", 40, stepResultsArray, stepLock1, stepLock2, stepLock3));
-  taskExecutor.run((stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) => task("C", 5, stepResultsArray, stepLock1, stepLock2, stepLock3));
+  taskExecutor.run((stepLock1: ILock, stepLock2: ILock, stepLock3: ILock) =>
+    task("B", 40, stepResultsArray, stepLock1, stepLock2, stepLock3)
+  );
+  taskExecutor.run((stepLock1: ILock, stepLock2: ILock, stepLock3: ILock) =>
+    task("C", 5, stepResultsArray, stepLock1, stepLock2, stepLock3)
+  );
 
   await setTimeout(600, undefined);
 
@@ -108,9 +112,9 @@ test("promise multi step: method run", async () => {
 test("promise multi step: releaseAll", async () => {
   const taskExecutor = new PromiseMultiStep<string>({ stepConcurrentLimits: [1, 1, 1] });
 
-  taskExecutor.run((stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) => task("A", 50, null, stepLock1, stepLock2, stepLock3));
-  taskExecutor.run((stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) => task("B", 50, null, stepLock1, stepLock2, stepLock3));
-  taskExecutor.run((stepLock1: Lock, stepLock2: Lock, stepLock3: Lock) => task("C", 50, null, stepLock1, stepLock2, stepLock3));
+  taskExecutor.run((stepLock1: ILock, stepLock2: ILock, stepLock3: ILock) => task("A", 50, null, stepLock1, stepLock2, stepLock3));
+  taskExecutor.run((stepLock1: ILock, stepLock2: ILock, stepLock3: ILock) => task("B", 50, null, stepLock1, stepLock2, stepLock3));
+  taskExecutor.run((stepLock1: ILock, stepLock2: ILock, stepLock3: ILock) => task("C", 50, null, stepLock1, stepLock2, stepLock3));
 
   await setTimeout(145, undefined);
 
