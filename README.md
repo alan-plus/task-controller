@@ -1,93 +1,128 @@
 [![Coverage Status](https://coveralls.io/repos/github/alan-plus/task-controller/badge.svg?branch=development)](https://coveralls.io/github/alan-plus/task-controller?branch=development)
-# Task Controller
-A set of classes that provide assistance with the concurrent access to shared resources and the control of asynchronous task.
+
+# Lock and Task Controller
+
+A set of classes that provide assistance with the concurrent access to shared resources and the control of asynchronous tasks.
 - Locks
-  - [LockMutex](#LockMutex): a lock class to prevent concurrent access to a resource.
-  - [LockPool](#LockPool): alternative lock class that allows limited concurrent access to a resource.
-- Task Executors
-  - [TaskExecutorMutex](#TaskExecutorMutex): a class to prevent concurrent task execution.
-  - [TaskExecutorPool](#TaskExecutorPool): allows limited concurrent task execution.
-  - [TaskExecutorMultiStep](#TaskExecutorMultiStep): allows the concurrency of each step to be adjusted.
+  - [LockController](#LockController): a class to control concurrent access to resources.
+- Tasks
+  - [TaskController](#TaskController): a class to control concurrent asynchronous tasks execution.
+  - [MultiStepController](#MultiStepController): a class to adjust the concurrency at step level on multi step tasks execution.
 
 ## Getting started
+
 ### Installation:
+
 ```
 npm install task-controller
 ```
-### LockMutex
-Provides a mechanism to prevents concurrent access to a resource.
+
+### LockController class
+
+Provides a mechanism to control concurrent access to resources.
+
 #### Constructor
-`new LockMutex(options?: LockOptions)`
-#### LockOptions
+
+`new LockController(options?: LockControllerOptions);`
+
+#### Options
+
+- `concurrency` (number, default: 1) maximum concurrent access to the resource.
 - `queueType` ("FIFO" | "LIFO", default: "FIFO")
   - FIFO: first request, first acquire.
   - LIFO: last request, first acquire.
-- `releaseTimeout` (milliseconds > 0, defaults: undefined) prevent a task to acquire the lock indefinitely.
-- `releaseTimeoutHandler` (defaults: undefined) function to handle releaseTimeout event.
+- `releaseTimeout` (milliseconds > 0, defaults: none) prevent a task to acquire the lock indefinitely. If the lock has not already been released by the time the timeout is reached, it is released automatically.
+- `releaseTimeoutHandler` (callback, defaults: none) function to handle releaseTimeout event.
+
 #### How to use
+
 ```js
-import { LockMutex } from "task-controller";
+import { LockController } from "task-controller";
 
-const lock = new LockMutex();
+  async function exampleWithConcurrency(concurrency: number){
 
-async function sample () {
-  const release = await lock.acquire();
-  try {
-    // access the resource protected by this lock
-  } finally {
-    // IMPORTANT: Make sure to always call the `release` function.
-    release();
+    const lock = new LockController({ concurrency });
+
+    const accessTheResource = async (id: number) => {
+      const release = await lock.acquire();
+      console.log(`${id} acquire the lock`);
+      try {
+        // access the resource protected by this lock
+        await setTimeout(1, 'just to simulate some logic');
+      } finally {
+        // IMPORTANT: Make sure to always call the `release` function.
+        release();
+        console.log(`${id} release the lock`);
+      }
+    };
+
+    await Promise.all([accessTheResource(1), accessTheResource(2), accessTheResource(3)]);
   }
-}
+
 ```
-### LockPool
-Provides a mechanism to allow limited concurrent access to a resource.
+`exampleWithConcurrency(1);`
+```console
+1 acquire the lock
+1 release the lock
+2 acquire the lock
+2 acquire the lock
+3 acquire the lock
+3 release the lock
+```
+`exampleWithConcurrency(2);`
+```console
+1 acquire the lock
+2 acquire the lock
+1 release the lock
+3 acquire the lock
+2 release the lock
+3 release the lock
+```
+
+### TaskController class
+
+Provides a mechanism to control concurrent asynchronous tasks execution. 
+
 #### Constructor
-`new LockPool({ concurrentLimit: number })`
-#### LockPoolOptions
-[LockOptions](#LockOptions) +
-- `concurrentLimit` (number, default: 1) max concurrent access to the resource.
+
+`new TaskController(options?: TaskControllerOptions);`
+
+#### Options
+- `concurrency` (number, default: 1) maximum concurrent task execution.
+- `queueType` ("FIFO" | "LIFO", default: "FIFO")
+  - FIFO: first request, first run.
+  - LIFO: last request, first run.
+- `waitingTimeout` (milliseconds > 0, defaults: none) if a task reaches its timeout before being selected for execution, it is automatically discarded.
+- `waitingTimeoutHandler` (callback, defaults: none) function to handle waitingTimeout event.
+- `releaseTimeout` (milliseconds > 0, defaults: none) if a running task exceeds its timeout limit before completing, it will continue running, but will be marked as expired. This enables another task to be selected for execution.
+- `releaseTimeoutHandler` (callback, defaults: none) function to handle releaseTimeout event.
+- `errorHandler`(callback, defaults: none) function to handle task error event.
+- `signal` (AbortSignal, defaults: none) once the signal has been aborted, no more tasks will be selected for execution. Any tasks that are currently running will continue as normal until completion.
+
 #### How to use
+
+##### concurrency = 1
+
 ```js
-import { LockPool } from "task-controller";
+import { TaskController } from "task-controller";
 
-  // concurrent access to the resource limited to 2
-  const lock = new LockPool({ concurrentLimit: 2 }); 
+  const taskController = new TaskController();
 
-  await Promise.all([
-    
-    // Task 1 (will access the resource immediately)
-    new Promise<any>(async (resolve) => {
-      const release = await lock.acquire();
-      try {
-        // access the protected resource
-        resolve();
-      } finally {
-        release();
-      }
-    }),
+  async function task(taskId: number) {
+    console.log(`Task ${taskId} selected to be executed`);
 
-    // Task 2 (will access the resource immediately)
-    new Promise<any>(async (resolve) => {
-      const release = await lock.acquire();
-      try {
-        // access the protected resource
-        resolve();
-      } finally {
-        release();
-      }
-    }),
+    await setTimeout(1, 'just to simulate some logic');
 
-    // Task 3 (will access the resource once 'Task 1' or 'Task 2' is completed)
-    new Promise<any>(async (resolve) => {
-      const release = await lock.acquire();
-      try {
-        // access the protected resource
-        resolve();
-      } finally {
-        release();
-      }
-    }),
-  ]);
+    console.log(`Task ${taskId} finished`);
+  }
+
+  await taskController.runForEach(task, [ 1, 2, 3 ]);
 ```
-Observations: `new LockMutex()` equals to `new LockPool();` equals to `new LockPool({ concurrentLimit: 1 });`
+```console
+Task 1 selected to be executed
+Task 1 finished
+Task 2 selected to be executed
+Task 2 finished
+Task 3 selected to be executed
+Task 3 finished
+```

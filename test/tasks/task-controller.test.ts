@@ -19,9 +19,9 @@ test("taskController: prevent concurrent task execution (default options)", asyn
   const resultsInOrder = new Array<string>();
 
   await taskExecutor.runMany([
-    () => task("A", 120, resultsInOrder),
-    () => task("B", 60, resultsInOrder),
-    () => task("C", 10, resultsInOrder),
+    { task, args: ["A", 120, resultsInOrder] },
+    { task, args: ["B", 60, resultsInOrder] },
+    { task, args: ["C", 10, resultsInOrder] },
   ]);
 
   expect(resultsInOrder[0]).toBe("A");
@@ -34,9 +34,9 @@ test("taskController: prevent concurrent task execution FIFO", async () => {
   const resultsInOrder = new Array<string>();
 
   await taskExecutor.runMany([
-    () => task("A", 120, resultsInOrder),
-    () => task("B", 60, resultsInOrder),
-    () => task("C", 10, resultsInOrder),
+    { task, args: ["A", 120, resultsInOrder] },
+    { task, args: ["B", 60, resultsInOrder] },
+    { task, args: ["C", 10, resultsInOrder] },
   ]);
 
   expect(resultsInOrder[0]).toBe("A");
@@ -49,9 +49,9 @@ test("taskController: prevent concurrent task execution LIFO", async () => {
   const resultsInOrder = new Array<string>();
 
   await taskExecutor.runMany([
-    () => task("A", 120, resultsInOrder),
-    () => task("B", 60, resultsInOrder),
-    () => task("C", 10, resultsInOrder),
+    { task, args: ["A", 120, resultsInOrder] },
+    { task, args: ["B", 60, resultsInOrder] },
+    { task, args: ["C", 10, resultsInOrder] },
   ]);
 
   expect(resultsInOrder[0]).toBe("A");
@@ -180,11 +180,11 @@ test("taskController: listen 'task-discarded' even (timeoutReached)", async () =
   const taskExecutor = new TaskController<string>({ waitingTimeout: 30 });
   let taskDiscardedEventTriggered = false;
   let discardReason: DiscardReason | undefined;
-  let discardedTaskArg: string | undefined;
+  let discardedTaskArg: string[] | undefined;
   taskExecutor.on("task-discarded", (taskEntry) => {
     taskDiscardedEventTriggered = true;
     discardReason = taskEntry.discardReason;
-    discardedTaskArg = taskEntry.arg;
+    discardedTaskArg = taskEntry.args;
   });
 
   taskExecutor.run((arg) => task(arg, 100), "A");
@@ -199,7 +199,7 @@ test("taskController: listen 'task-discarded' even (timeoutReached)", async () =
     fail("discardReason missed");
   }
   if (discardedTaskArg !== undefined) {
-    expect(discardedTaskArg).toBe("B");
+    expect(discardedTaskArg[0]).toBe("B");
   } else {
     fail("discardedTaskArg missed");
   }
@@ -209,11 +209,11 @@ test("taskController: listen 'task-discarded' even (forced)", async () => {
   const taskExecutor = new TaskController<string>();
   let taskDiscardedEventTriggered = false;
   let discardReason: DiscardReason | undefined;
-  let discardedTaskArg: string | undefined;
+  let discardedTaskArgs: string[] | undefined;
   taskExecutor.on("task-discarded", (taskEntry) => {
     taskDiscardedEventTriggered = true;
     discardReason = taskEntry.discardReason;
-    discardedTaskArg = taskEntry.arg;
+    discardedTaskArgs = taskEntry.args;
   });
 
   taskExecutor.run((arg) => task(arg, 100), "A");
@@ -229,8 +229,8 @@ test("taskController: listen 'task-discarded' even (forced)", async () => {
   } else {
     fail("discardReason missed");
   }
-  if (discardedTaskArg !== undefined) {
-    expect(discardedTaskArg).toBe("B");
+  if (discardedTaskArgs !== undefined) {
+    expect(discardedTaskArgs).toBe("B");
   } else {
     fail("discardedTaskArg missed");
   }
@@ -242,11 +242,11 @@ test("taskController: listen 'task-discarded' even (abortSignal)", async () => {
   const taskExecutor = new TaskController<string>({ signal: abortController.signal });
   let taskDiscardedEventTriggered = false;
   let discardReason: DiscardReason | undefined;
-  let discardedTaskArg: string | undefined;
+  let discardedTaskArgs: string[] | undefined;
   taskExecutor.on("task-discarded", (taskEntry) => {
     taskDiscardedEventTriggered = true;
     discardReason = taskEntry.discardReason;
-    discardedTaskArg = taskEntry.arg;
+    discardedTaskArgs = taskEntry.args;
   });
 
   taskExecutor.run((arg) => task(arg, 20), "A");
@@ -262,8 +262,8 @@ test("taskController: listen 'task-discarded' even (abortSignal)", async () => {
   } else {
     fail("discardReason missed");
   }
-  if (discardedTaskArg !== undefined) {
-    expect(discardedTaskArg).toBe("B");
+  if (discardedTaskArgs !== undefined) {
+    expect(discardedTaskArgs[0]).toBe("B");
   } else {
     fail("discardedTaskArg missed");
   }
@@ -310,10 +310,10 @@ test("taskController: tryRun false (someOneIsWaitingTheLock)", async () => {
 
 test("taskController: releaseTimeoutHandler triggered", async () => {
   let timeoutHandlerTriggered = false;
-  let taskArg: string | undefined;
+  let taskArgs: string[] | undefined;
   const timeoutHandler = (taskEntry: TaskEntry) => {
     timeoutHandlerTriggered = true;
-    taskArg = taskEntry.arg;
+    taskArgs = taskEntry.args;
   };
 
   const taskExecutor = new TaskController({ releaseTimeout: 50, releaseTimeoutHandler: timeoutHandler });
@@ -322,8 +322,8 @@ test("taskController: releaseTimeoutHandler triggered", async () => {
   await setTimeout(70, undefined);
 
   expect(timeoutHandlerTriggered).toBe(true);
-  if (taskArg !== undefined) {
-    expect(taskArg).toBe("A");
+  if (taskArgs !== undefined) {
+    expect(taskArgs[0]).toBe("A");
   } else {
     fail("taskArg missed");
   }
@@ -351,11 +351,11 @@ test("taskController: listen 'error' event (release-timeout-handler-failure)", a
   const taskExecutor = new TaskController({ releaseTimeout: 50, releaseTimeoutHandler: timeoutHandler });
   let errorEventTriggered = false;
   let taskEventError: TaskEventError | undefined;
-  let taskArg: string | undefined;
+  let taskArgs: string[] | undefined;
   taskExecutor.on("error", (taskEntry: TaskEntry, error: TaskEventError) => {
     errorEventTriggered = true;
     taskEventError = error;
-    taskArg = taskEntry.arg;
+    taskArgs = taskEntry.args;
   });
 
   taskExecutor.run((arg) => task(arg, 200), "A");
@@ -367,8 +367,8 @@ test("taskController: listen 'error' event (release-timeout-handler-failure)", a
   } else {
     fail("taskEventError missed");
   }
-  if (taskArg !== undefined) {
-    expect(taskArg).toBe("A");
+  if (taskArgs !== undefined) {
+    expect(taskArgs[0]).toBe("A");
   } else {
     fail("taskArg missed");
   }
@@ -376,10 +376,10 @@ test("taskController: listen 'error' event (release-timeout-handler-failure)", a
 
 test("taskController: waitingTimeoutHandler triggered", async () => {
   let timeoutHandlerTriggered = false;
-  let taskArg: string | undefined;
+  let taskArgs: string[] | undefined;
   const timeoutHandler = (taskEntry: TaskEntry) => {
     timeoutHandlerTriggered = true;
-    taskArg = taskEntry.arg;
+    taskArgs = taskEntry.args;
   };
 
   const taskExecutor = new TaskController({ waitingTimeout: 50, waitingTimeoutHandler: timeoutHandler });
@@ -389,8 +389,8 @@ test("taskController: waitingTimeoutHandler triggered", async () => {
   await setTimeout(55, undefined);
 
   expect(timeoutHandlerTriggered).toBe(true);
-  if (taskArg !== undefined) {
-    expect(taskArg).toBe("B");
+  if (taskArgs !== undefined) {
+    expect(taskArgs[0]).toBe("B");
   } else {
     fail("taskArg missed");
   }
@@ -438,11 +438,11 @@ test("taskController: listen 'error' event (waiting-timeout-handler-failure)", a
   const taskExecutor = new TaskController({ waitingTimeout: 50, waitingTimeoutHandler: timeoutHandler });
   let errorEventTriggered = false;
   let taskEventError: TaskEventError | undefined;
-  let taskArg: string | undefined;
+  let taskArgs: string[] | undefined;
   taskExecutor.on("error", (taskEntry: TaskEntry, error: TaskEventError) => {
     errorEventTriggered = true;
     taskEventError = error;
-    taskArg = taskEntry.arg;
+    taskArgs = taskEntry.args;
   });
 
   taskExecutor.run((arg) => task(arg, 60), "A");
@@ -455,8 +455,8 @@ test("taskController: listen 'error' event (waiting-timeout-handler-failure)", a
   } else {
     fail("taskEventError missed");
   }
-  if (taskArg !== undefined) {
-    expect(taskArg).toBe("B");
+  if (taskArgs !== undefined) {
+    expect(taskArgs[0]).toBe("B");
   } else {
     fail("taskArg missed");
   }
@@ -470,11 +470,11 @@ test("taskController: listen 'error' event (error-handler-failure)", async () =>
   const taskExecutor = new TaskController({ errorHandler });
   let errorEventTriggered = false;
   let taskEventError: TaskEventError | undefined;
-  let taskArg: string | undefined;
+  let taskArgs: string[] | undefined;
   taskExecutor.on("error", (taskEntry: TaskEntry, error: TaskEventError) => {
     errorEventTriggered = true;
     taskEventError = error;
-    taskArg = taskEntry.arg;
+    taskArgs = taskEntry.args;
   });
 
   taskExecutor.run(() => {
@@ -489,8 +489,8 @@ test("taskController: listen 'error' event (error-handler-failure)", async () =>
   } else {
     fail("taskEventError missed");
   }
-  if (taskArg !== undefined) {
-    expect(taskArg).toBe("A");
+  if (taskArgs !== undefined) {
+    expect(taskArgs[0]).toBe("A");
   } else {
     fail("taskArg missed");
   }
@@ -577,11 +577,11 @@ test("taskController: TaskOptions (waitingTimeout)", async () => {
 
   let taskDiscardedEventTriggered = false;
   let discardReason: DiscardReason | undefined;
-  let discardedTaskArg: string | undefined;
+  let discardedTaskArgs: string[] | undefined;
   taskExecutor.on("task-discarded", (taskEntry) => {
     taskDiscardedEventTriggered = true;
     discardReason = taskEntry.discardReason;
-    discardedTaskArg = taskEntry.arg;
+    discardedTaskArgs = taskEntry.args;
   });
 
   taskExecutor.run((arg) => task(arg, 100), "A");
@@ -595,8 +595,8 @@ test("taskController: TaskOptions (waitingTimeout)", async () => {
   } else {
     fail("discardReason missed");
   }
-  if (discardedTaskArg !== undefined) {
-    expect(discardedTaskArg).toBe("B");
+  if (discardedTaskArgs !== undefined) {
+    expect(discardedTaskArgs[0]).toBe("B");
   } else {
     fail("discardedTaskArg missed");
   }
@@ -606,10 +606,10 @@ test("taskController: TaskOptions (waitingTimeout, waitingTimeoutHandler)", asyn
   const taskExecutor = new TaskController<string>();
 
   let timeoutHandlerTriggered = false;
-  let taskArg: string | undefined;
+  let taskArgs: string[] | undefined;
   const timeoutHandler = (taskEntry: TaskEntry) => {
     timeoutHandlerTriggered = true;
-    taskArg = taskEntry.arg;
+    taskArgs = taskEntry.args;
   };
 
   taskExecutor.run((arg) => task(arg, 100), "A");
@@ -618,8 +618,8 @@ test("taskController: TaskOptions (waitingTimeout, waitingTimeoutHandler)", asyn
   await setTimeout(55, undefined);
 
   expect(timeoutHandlerTriggered).toBe(true);
-  if (taskArg !== undefined) {
-    expect(taskArg).toBe("B");
+  if (taskArgs !== undefined) {
+    expect(taskArgs[0]).toBe("B");
   } else {
     fail("taskArg missed");
   }
@@ -629,12 +629,12 @@ test("taskController: TaskOptions (errorHandler)", async () => {
   const taskExecutor = new TaskController<string>();
 
   let errorEventTriggered = false;
-  let taskArg: string | undefined;
+  let taskArgs: string[] | undefined;
   let errorMessage: string | undefined;
 
   const errorHandler = (taskEntry: TaskEntry, error: any) => {
     errorEventTriggered = true;
-    taskArg = taskEntry.arg;
+    taskArgs = taskEntry.args;
     errorMessage = error.message;
   };
 
@@ -654,8 +654,8 @@ test("taskController: TaskOptions (errorHandler)", async () => {
   } else {
     fail("errorMessage missed");
   }
-  if (taskArg !== undefined) {
-    expect(taskArg).toBe("A");
+  if (taskArgs !== undefined) {
+    expect(taskArgs[0]).toBe("A");
   } else {
     fail("taskArg missed");
   }
@@ -663,10 +663,10 @@ test("taskController: TaskOptions (errorHandler)", async () => {
 
 test("taskController: TaskOptions (releaseTimeout, releaseTimeoutHandler)", async () => {
   let timeoutHandlerTriggered = false;
-  let taskArg: string | undefined;
+  let taskArgs: string[] | undefined;
   const timeoutHandler = (taskEntry: TaskEntry) => {
     timeoutHandlerTriggered = true;
-    taskArg = taskEntry.arg;
+    taskArgs = taskEntry.args;
   };
 
   const taskExecutor = new TaskController();
@@ -675,8 +675,8 @@ test("taskController: TaskOptions (releaseTimeout, releaseTimeoutHandler)", asyn
   await setTimeout(70, undefined);
 
   expect(timeoutHandlerTriggered).toBe(true);
-  if (taskArg !== undefined) {
-    expect(taskArg).toBe("A");
+  if (taskArgs !== undefined) {
+    expect(taskArgs[0]).toBe("A");
   } else {
     fail("taskArg missed");
   }
@@ -688,11 +688,11 @@ test("taskController: TaskOptions (signal)", async () => {
   const taskExecutor = new TaskController<string>();
   let taskDiscardedEventTriggered = false;
   let discardReason: DiscardReason | undefined;
-  let discardedTaskArg: string | undefined;
+  let discardedTaskArgs: string[] | undefined;
   taskExecutor.on("task-discarded", (taskEntry) => {
     taskDiscardedEventTriggered = true;
     discardReason = taskEntry.discardReason;
-    discardedTaskArg = taskEntry.arg;
+    discardedTaskArgs = taskEntry.args;
   });
 
   taskExecutor.run((arg) => task(arg, 20), "A");
@@ -708,8 +708,8 @@ test("taskController: TaskOptions (signal)", async () => {
   } else {
     fail("discardReason missed");
   }
-  if (discardedTaskArg !== undefined) {
-    expect(discardedTaskArg).toBe("B");
+  if (discardedTaskArgs !== undefined) {
+    expect(discardedTaskArgs[0]).toBe("B");
   } else {
     fail("discardedTaskArg missed");
   }
@@ -720,9 +720,9 @@ test("taskController: allow limited concurrent task execution", async () => {
   const resultsInOrder = new Array<string>();
 
   await taskExecutor.runMany([
-    () => task("A", 120, resultsInOrder),
-    () => task("B", 60, resultsInOrder),
-    () => task("C", 10, resultsInOrder),
+    { task, args: ["A", 120, resultsInOrder] },
+    { task, args: ["B", 60, resultsInOrder] },
+    { task, args: ["C", 10, resultsInOrder] },
   ]);
 
   expect(resultsInOrder[0]).toBe("B");
@@ -734,10 +734,11 @@ test("taskController: runMany arguments", async () => {
   const taskExecutor = new TaskController<string>({ concurrency: 2 });
   const resultsInOrder = new Array<string>();
 
-  await taskExecutor.runMany(
-    [(arg) => task(arg, 120, resultsInOrder), (arg) => task(arg, 60, resultsInOrder), (arg) => task(arg, 10, resultsInOrder)],
-    ["A", "B"]
-  );
+  await taskExecutor.runMany([
+    { task, args: ["A", 120, resultsInOrder] },
+    { task, args: ["B", 60, resultsInOrder] },
+    { task, args: [undefined, 10, resultsInOrder] },
+  ]);
 
   expect(resultsInOrder[0]).toBe("B");
   expect(resultsInOrder[1]).toBe(undefined);
@@ -749,9 +750,9 @@ test("taskController: default options", async () => {
   const resultsInOrder = new Array<string>();
 
   await taskExecutor.runMany([
-    () => task("A", 120, resultsInOrder),
-    () => task("B", 60, resultsInOrder),
-    () => task("C", 10, resultsInOrder),
+    { task, args: ["A", 120, resultsInOrder] },
+    { task, args: ["B", 60, resultsInOrder] },
+    { task, args: ["C", 10, resultsInOrder] },
   ]);
 
   expect(resultsInOrder[0]).toBe("A");
@@ -764,9 +765,9 @@ test("taskController: invalid options", async () => {
   const resultsInOrder = new Array<string>();
 
   await taskExecutor.runMany([
-    () => task("A", 120, resultsInOrder),
-    () => task("B", 60, resultsInOrder),
-    () => task("C", 10, resultsInOrder),
+    { task, args: ["A", 120, resultsInOrder] },
+    { task, args: ["B", 60, resultsInOrder] },
+    { task, args: ["C", 10, resultsInOrder] },
   ]);
 
   expect(resultsInOrder[0]).toBe("A");

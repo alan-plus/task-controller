@@ -54,24 +54,48 @@ export class TaskController<T> {
     return this;
   }
 
-  public async run<T>(task: (arg?: any) => Promise<T>, arg?: any, options?: TaskOptions): Promise<PromiseSettledResult<T>> {
-    return await this.enqueueAndRun(task, arg, OptionsSanitizerUtils.sanitize(options, defaultOptions));
+  public async run<T>(task: (...args: any[]) => Promise<T>, ...args: any[]): Promise<PromiseSettledResult<T>> {
+    return await this.enqueueAndRun(task, undefined, args);
+  }
+
+  public async runWithOptions<T>(
+    task: (...args: any[]) => Promise<T>,
+    options: TaskOptions,
+    ...args: any[]
+  ): Promise<PromiseSettledResult<T>> {
+    return await this.enqueueAndRun(task, OptionsSanitizerUtils.sanitize(options, defaultOptions), args);
   }
 
   public async runMany<T>(
-    tasks: Array<(arg?: any) => Promise<T>>,
-    args?: any[],
-    options?: TaskOptions
+    tasks: { task: (...args: any[]) => Promise<T>; options?: TaskOptions; args?: any[] }[]
   ): Promise<PromiseSettledResult<T>[]> {
-    const promises = tasks.map((task, index) => {
-      const arg = args?.length ? args[index] : undefined;
-      return this.enqueueAndRun(task, arg ?? undefined, OptionsSanitizerUtils.sanitize(options, defaultOptions));
+    const promises = tasks.map((taskData) => {
+      const { task, options, args } = taskData;
+      return this.enqueueAndRun(task, OptionsSanitizerUtils.sanitize(options, defaultOptions), args);
     });
 
     return Promise.all(promises);
   }
 
-  public tryRun<T>(task: (arg?: any) => Promise<T>, arg?: any, options?: TaskOptions): TryRunResponse<T> {
+  public async runForEach<T>(
+    argsArray: any[],
+    task: (...args: any[]) => Promise<T>,
+    options?: TaskOptions
+  ): Promise<PromiseSettledResult<T>[]> {
+    const sanitizeOptions = OptionsSanitizerUtils.sanitize(options, defaultOptions);
+
+    const promises = argsArray.map((args) => {
+      return this.enqueueAndRun(task, sanitizeOptions, args);
+    });
+
+    return Promise.all(promises);
+  }
+
+  public tryRun<T>(task: (...args: any[]) => Promise<T>, ...args: any[]): TryRunResponse<T> {
+    return this.tryRunWithOptions(task, undefined, args);
+  }
+
+  public tryRunWithOptions<T>(task: (...args: any[]) => Promise<T>, options?: TaskOptions, ...args: any[]): TryRunResponse<T> {
     const someOneIsWaitingTheLock = this.waitingQueue.length > 0;
     if (someOneIsWaitingTheLock) {
       return { available: false };
@@ -82,7 +106,7 @@ export class TaskController<T> {
       return { available: false };
     }
 
-    return { available: true, run: () => this.enqueueAndRun(task, arg, OptionsSanitizerUtils.sanitize(options, defaultOptions)) };
+    return { available: true, run: () => this.enqueueAndRun(task, OptionsSanitizerUtils.sanitize(options, defaultOptions), args) };
   }
 
   public releaseRunningTasks(): void {
@@ -155,9 +179,9 @@ export class TaskController<T> {
     return this.internalEmitter.emit(event, ...args);
   }
 
-  private async acquire(arg?: any, options?: TaskOptions): Promise<AcquireResponse> {
+  private async acquire(options?: TaskOptions, ...args: any[]): Promise<AcquireResponse> {
     return new Promise<AcquireResponse>((resolve, reject) => {
-      const taskEntry: WaitingTask = { resolve, reject, arg, options } satisfies WaitingTask;
+      const taskEntry: WaitingTask = { resolve, reject, args, options } satisfies WaitingTask;
       this.waitingQueue.push(taskEntry);
 
       const waitingTimeout = taskEntry.options?.waitingTimeout ?? this.options.waitingTimeout;
@@ -183,10 +207,14 @@ export class TaskController<T> {
     });
   }
 
-  private async enqueueAndRun<T>(task: (arg?: any) => Promise<T>, arg?: any, options?: TaskOptions): Promise<PromiseSettledResult<T>> {
-    const { release, taskEntry } = await this.acquire(arg, options);
+  private async enqueueAndRun<T>(
+    task: (...args: any[]) => Promise<T>,
+    options?: TaskOptions,
+    ...args: any[]
+  ): Promise<PromiseSettledResult<T>> {
+    const { release, taskEntry } = await this.acquire(options, args);
     try {
-      const value = await task(taskEntry.arg);
+      const value = await task(taskEntry.args);
 
       return { status: "fulfilled", value } as PromiseSettledResult<T>;
     } catch (error) {
@@ -221,7 +249,7 @@ export class TaskController<T> {
   }
 
   private start(waitingTask: TaskEntry): TaskControllerReleaseFunction {
-    const runningTask = { timeoutReached: false, arg: waitingTask.arg, options: waitingTask.options } as RunningTask;
+    const runningTask = { timeoutReached: false, args: waitingTask.args, options: waitingTask.options } as RunningTask;
     const releaseFunction = this.buildReleaseFunction(runningTask);
     this.runningQueue.set(runningTask, releaseFunction);
     this.emit("task-started", runningTask);

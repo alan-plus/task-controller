@@ -31,6 +31,51 @@ class Task {
   }
 }
 
+async function exampleWithConcurrency(concurrency: number, console: string[]) {
+  const lock = new LockController({ concurrency });
+
+  const accessTheResource = async (id: number) => {
+    const release = await lock.acquire();
+    console.push(`${id} acquire the lock`);
+    try {
+      // access the resource protected by this lock
+      await setTimeout(1, "just to simulate some logic");
+    } finally {
+      // IMPORTANT: Make sure to always call the `release` function.
+      release();
+      console.push(`${id} release the lock`);
+    }
+  };
+
+  await Promise.all([accessTheResource(1), accessTheResource(2), accessTheResource(3)]);
+}
+
+test("lockController: documentation example (concurrency = 1)", async () => {
+  const output = new Array<string>();
+
+  await exampleWithConcurrency(1, output);
+
+  expect(output[0]).toBe("1 acquire the lock");
+  expect(output[1]).toBe("1 release the lock");
+  expect(output[2]).toBe("2 acquire the lock");
+  expect(output[3]).toBe("2 release the lock");
+  expect(output[4]).toBe("3 acquire the lock");
+  expect(output[5]).toBe("3 release the lock");
+});
+
+test("lockController: documentation example (concurrency = 2)", async () => {
+  const output = new Array<string>();
+
+  await exampleWithConcurrency(2, output);
+
+  expect(output[0]).toBe("1 acquire the lock");
+  expect(output[1]).toBe("2 acquire the lock");
+  expect(output[2]).toBe("1 release the lock");
+  expect(output[3]).toBe("3 acquire the lock");
+  expect(output[4]).toBe("2 release the lock");
+  expect(output[5]).toBe("3 release the lock");
+});
+
 test("lockController: prevent concurrent access to resource (default options)", async () => {
   const resultsInOrderWithoutLock = new Array<string>();
   const promisesWithoutLock = [
@@ -268,7 +313,7 @@ test("lock pool: allow limited concurrent access to resource", async () => {
     new Task("C").run(10, resultsInOrderWithoutLock),
   ];
 
-  const lock = new LockController({ concurrentLimit: 2 });
+  const lock = new LockController({ concurrency: 2 });
   const resultsInOrderWithLock = new Array<string>();
   const promisesWithLock = [
     new Task("A", lock).run(120, resultsInOrderWithLock),
@@ -317,7 +362,7 @@ test("lock pool: default options", async () => {
 });
 
 test("lock pool: invalid options", async () => {
-  const lock = new LockController({ concurrentLimit: "5" } as any);
+  const lock = new LockController({ concurrency: "5" } as any);
   const resultsInOrder = new Array<string>();
   const promisesWithLock = [
     new Task("A", lock).run(120, resultsInOrder),
@@ -332,55 +377,8 @@ test("lock pool: invalid options", async () => {
   expect(resultsInOrder[2]).toBe("C");
 });
 
-test("lock pool: example code", async () => {
-  const lock = new LockController({ concurrentLimit: 2 });
-  const initTimestamp = Date.now();
-
-  const results = await Promise.all([
-    new Promise<any>(async (resolve) => {
-      const release = await lock.acquire();
-      const accessToLockTimestamp = Date.now();
-      try {
-        // access the resource for 150 miliseconds
-        await setTimeout(150, undefined);
-
-        resolve({ task: "A", timeToAccessTheLock: accessToLockTimestamp - initTimestamp });
-      } finally {
-        release();
-      }
-    }),
-    new Promise<any>(async (resolve) => {
-      const release = await lock.acquire();
-      const accessToLockTimestamp = Date.now();
-      try {
-        // access the resource for 100 miliseconds
-        await setTimeout(100, undefined);
-
-        resolve({ task: "B", timeToAccessTheLock: accessToLockTimestamp - initTimestamp });
-      } finally {
-        release();
-      }
-    }),
-    new Promise<any>(async (resolve) => {
-      const release = await lock.acquire();
-      const accessToLockTimestamp = Date.now();
-      try {
-        // access the resource protected by this lock
-
-        resolve({ task: "C", timeToAccessTheLock: accessToLockTimestamp - initTimestamp });
-      } finally {
-        release();
-      }
-    }),
-  ]);
-
-  expect(results[0].timeToAccessTheLock).toBeLessThan(10);
-  expect(results[1].timeToAccessTheLock).toBeLessThan(10);
-  expect(results[2].timeToAccessTheLock).toBeGreaterThanOrEqual(100);
-});
-
 test("lockController: releaseAcquiredLocks method (concurrent 3, running 3, waiting: 0)", async () => {
-  const lock = new LockController({ concurrentLimit: 3 });
+  const lock = new LockController({ concurrency: 3 });
   lock.acquire();
   lock.acquire();
   lock.acquire();
@@ -394,7 +392,7 @@ test("lockController: releaseAcquiredLocks method (concurrent 3, running 3, wait
 });
 
 test("lockController: releaseAcquiredLocks method (concurrent 1, running 1, waiting: 1)", async () => {
-  const lock = new LockController({ concurrentLimit: 1 });
+  const lock = new LockController({ concurrency: 1 });
   lock.acquire();
   lock.acquire();
 
@@ -407,7 +405,7 @@ test("lockController: releaseAcquiredLocks method (concurrent 1, running 1, wait
 });
 
 test("lockController: releaseAcquiredLocks method (concurrent 1, running 0, waiting: 0)", async () => {
-  const lock = new LockController({ concurrentLimit: 1 });
+  const lock = new LockController({ concurrency: 1 });
 
   const isLockedBeforeReleaseAll = !lock.isAvailable();
   lock.releaseAcquiredLocks();

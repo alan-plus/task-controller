@@ -10,7 +10,7 @@ type WaitingLock = {
 type AcquiredLock = { releaseTimeoutId?: NodeJS.Timeout };
 
 const defaultOptions: Required<LockControllerOptions> = {
-  concurrentLimit: 1,
+  concurrency: 1,
   queueType: "FIFO",
   releaseTimeout: 0,
   releaseTimeoutHandler: () => {},
@@ -20,12 +20,12 @@ const defaultOptions: Required<LockControllerOptions> = {
  * The LockController class can be used to allow limited concurrent access to a resource.
  * ```js
  * import { LockController } from "task-controller";
- * 
+ *
  *   // concurrent access to the resource limited to 2
- *   const lock = new LockController({ concurrentLimit: 2 }); 
- * 
+ *   const lock = new LockController({ concurrentLimit: 2 });
+ *
  *   await Promise.all([
- *     
+ *
  *     // Task 1 (will access the resource immediately)
  *     new Promise<any>(async (resolve) => {
  *       const release = await lock.acquire();
@@ -36,7 +36,7 @@ const defaultOptions: Required<LockControllerOptions> = {
  *         release();
  *       }
  *     }),
- * 
+ *
  *     // Task 2 (will access the resource immediately)
  *     new Promise<any>(async (resolve) => {
  *       const release = await lock.acquire();
@@ -47,7 +47,7 @@ const defaultOptions: Required<LockControllerOptions> = {
  *         release();
  *       }
  *     }),
- * 
+ *
  *     // Task 3 (will access the resource once 'Task 1' or 'Task 2' is completed)
  *     new Promise<any>(async (resolve) => {
  *       const release = await lock.acquire();
@@ -123,7 +123,7 @@ export class LockController {
       return { acquired: false };
     }
 
-    const conncurrentLimitReached = this.acquiredQueue.size >= this.options.concurrentLimit;
+    const conncurrentLimitReached = this.acquiredQueue.size >= this.options.concurrency;
     if (conncurrentLimitReached) {
       return { acquired: false };
     }
@@ -138,7 +138,7 @@ export class LockController {
    *
    */
   public isAvailable(): boolean {
-    const conncurrentLimitReached = this.acquiredQueue.size >= this.options.concurrentLimit;
+    const conncurrentLimitReached = this.acquiredQueue.size >= this.options.concurrency;
     return !conncurrentLimitReached;
   }
 
@@ -230,11 +230,11 @@ export class LockController {
 
   private sanitizeOptions(options?: LockControllerOptions): Required<LockControllerOptions> {
     if (options) {
-      const sanitizedConcurrentLimit = OptionsSanitizerUtils.sanitizeNumberToPositiveGraterThanZeroInteger(options.concurrentLimit);
+      const sanitizedConcurrentLimit = OptionsSanitizerUtils.sanitizeNumberToPositiveGraterThanZeroInteger(options.concurrency);
       if (sanitizedConcurrentLimit === undefined) {
-        delete options.concurrentLimit;
+        delete options.concurrency;
       } else {
-        options.concurrentLimit = sanitizedConcurrentLimit;
+        options.concurrency = sanitizedConcurrentLimit;
       }
     }
 

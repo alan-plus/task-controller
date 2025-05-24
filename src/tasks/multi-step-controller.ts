@@ -8,7 +8,7 @@ export class MultiStepController<T> {
   constructor(options: MultiStepControllerOptions) {
     this.options = options;
     this.options.stepConcurrencies.forEach((concurrentLimit) => {
-      this.stepLocks.push(new LockController({ concurrentLimit }));
+      this.stepLocks.push(new LockController({ concurrency: concurrentLimit }));
     });
   }
 
