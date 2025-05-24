@@ -1,15 +1,14 @@
-import { LockPool } from "../locks/lock-pool";
-import { ILock } from "../interfaces/lock";
-import { TaskExecutorMultiStepOptions, MultiStepTask } from "../types/task-executor.type";
+import { LockController } from "../locks/lock-controller";
+import { MultiStepControllerOptions, MultiStepTask } from "./task-controller.type";
 
-export class TaskExecutorMultiStep<T> {
-  private readonly options: Required<TaskExecutorMultiStepOptions>;
-  private readonly stepLocks = new Array<ILock>();
+export class MultiStepController<T> {
+  private readonly options: Required<MultiStepControllerOptions>;
+  private readonly stepLocks = new Array<LockController>();
 
-  constructor(options: TaskExecutorMultiStepOptions) {
+  constructor(options: MultiStepControllerOptions) {
     this.options = options;
-    this.options.stepConcurrentLimits.forEach((concurrentLimit) => {
-      this.stepLocks.push(new LockPool({ concurrentLimit }));
+    this.options.stepConcurrencies.forEach((concurrentLimit) => {
+      this.stepLocks.push(new LockController({ concurrentLimit }));
     });
   }
 

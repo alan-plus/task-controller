@@ -1,14 +1,13 @@
-import { TaskExecutor } from "../interfaces/task-executor";
 import { EventEmitter } from "events";
 import {
-  TaskExecutorPoolOptions,
+  TaskControllerOptions,
   ReleaseBeforeFinishReason,
   TaskEntry,
   TaskEvent,
   TaskEventError,
   TaskOptions,
   TryRunResponse,
-} from "../types/task-executor.type";
+} from "./task-controller.type";
 import { OptionsSanitizerUtils } from "../utils/options-sanitizer.utils";
 
 type WaitingTask = TaskEntry & {
@@ -17,14 +16,14 @@ type WaitingTask = TaskEntry & {
   waitingTimeoutId?: NodeJS.Timeout;
 };
 type RunningTask = TaskEntry & { releaseTimeoutId?: NodeJS.Timeout };
-type TaskExecutorReleaseFunction = { (reason?: ReleaseBeforeFinishReason): void };
+type TaskControllerReleaseFunction = { (reason?: ReleaseBeforeFinishReason): void };
 type AcquireResponse = {
-  release: TaskExecutorReleaseFunction;
+  release: TaskControllerReleaseFunction;
   taskEntry: TaskEntry;
 };
 
-const defaultOptions: Required<TaskExecutorPoolOptions> = {
-  concurrentLimit: 1,
+const defaultOptions: Required<TaskControllerOptions> = {
+  concurrency: 1,
   queueType: "FIFO",
   releaseTimeout: 0,
   releaseTimeoutHandler: () => {},
@@ -32,16 +31,16 @@ const defaultOptions: Required<TaskExecutorPoolOptions> = {
   waitingTimeoutHandler: () => {},
   errorHandler: () => {},
   signal: { aborted: false } as AbortSignal,
-} satisfies TaskExecutorPoolOptions;
+} satisfies TaskControllerOptions;
 
-export class TaskExecutorPool<T> implements TaskExecutor<T> {
-  private readonly options: Required<TaskExecutorPoolOptions>;
+export class TaskController<T> {
+  private readonly options: Required<TaskControllerOptions>;
   private readonly waitingQueue = new Array<WaitingTask>();
-  private readonly runningQueue = new Map<RunningTask, TaskExecutorReleaseFunction>();
+  private readonly runningQueue = new Map<RunningTask, TaskControllerReleaseFunction>();
   private readonly expiredQueue = new Set<RunningTask>();
   private readonly internalEmitter = new EventEmitter();
 
-  constructor(options?: TaskExecutorPoolOptions) {
+  constructor(options?: TaskControllerOptions) {
     this.options = this.sanitizeOptions(options);
   }
 
@@ -78,7 +77,7 @@ export class TaskExecutorPool<T> implements TaskExecutor<T> {
       return { available: false };
     }
 
-    const conncurrentLimitReached = this.runningQueue.size >= this.options.concurrentLimit;
+    const conncurrentLimitReached = this.runningQueue.size >= this.options.concurrency;
     if (conncurrentLimitReached) {
       return { available: false };
     }
@@ -116,7 +115,7 @@ export class TaskExecutorPool<T> implements TaskExecutor<T> {
   }
 
   public isAvailable(): boolean {
-    const conncurrentLimitReached = this.runningQueue.size >= this.options.concurrentLimit;
+    const conncurrentLimitReached = this.runningQueue.size >= this.options.concurrency;
     return !conncurrentLimitReached;
   }
 
@@ -133,8 +132,8 @@ export class TaskExecutorPool<T> implements TaskExecutor<T> {
       return;
     }
 
-    const increased = newConcurrentLimit > this.options.concurrentLimit;
-    this.options.concurrentLimit = newConcurrentLimit;
+    const increased = newConcurrentLimit > this.options.concurrency;
+    this.options.concurrency = newConcurrentLimit;
     if (increased) {
       this.dispatchNextTask();
     }
@@ -221,7 +220,7 @@ export class TaskExecutorPool<T> implements TaskExecutor<T> {
     nextTask.resolve({ release: releaseFunction, taskEntry: nextTask } satisfies AcquireResponse);
   }
 
-  private start(waitingTask: TaskEntry): TaskExecutorReleaseFunction {
+  private start(waitingTask: TaskEntry): TaskControllerReleaseFunction {
     const runningTask = { timeoutReached: false, arg: waitingTask.arg, options: waitingTask.options } as RunningTask;
     const releaseFunction = this.buildReleaseFunction(runningTask);
     this.runningQueue.set(runningTask, releaseFunction);
@@ -230,8 +229,8 @@ export class TaskExecutorPool<T> implements TaskExecutor<T> {
     return releaseFunction;
   }
 
-  private buildReleaseFunction(taskEntry: RunningTask): TaskExecutorReleaseFunction {
-    const releaseFunction: TaskExecutorReleaseFunction = (reason?: ReleaseBeforeFinishReason) => {
+  private buildReleaseFunction(taskEntry: RunningTask): TaskControllerReleaseFunction {
+    const releaseFunction: TaskControllerReleaseFunction = (reason?: ReleaseBeforeFinishReason) => {
       if (this.expiredQueue.has(taskEntry)) {
         this.expiredQueue.delete(taskEntry);
         this.emit("task-finished", taskEntry);
@@ -308,13 +307,13 @@ export class TaskExecutorPool<T> implements TaskExecutor<T> {
     return taskEntry;
   }
 
-  private sanitizeOptions(options?: TaskExecutorPoolOptions): Required<TaskExecutorPoolOptions> {
+  private sanitizeOptions(options?: TaskControllerOptions): Required<TaskControllerOptions> {
     if (options) {
-      const sanitizedConcurrentLimit = OptionsSanitizerUtils.sanitizeNumberToPositiveGraterThanZeroInteger(options.concurrentLimit);
+      const sanitizedConcurrentLimit = OptionsSanitizerUtils.sanitizeNumberToPositiveGraterThanZeroInteger(options.concurrency);
       if (sanitizedConcurrentLimit === undefined) {
-        delete options.concurrentLimit;
+        delete options.concurrency;
       } else {
-        options.concurrentLimit = sanitizedConcurrentLimit;
+        options.concurrency = sanitizedConcurrentLimit;
       }
     }
 

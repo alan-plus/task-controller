@@ -1,5 +1,5 @@
-import { QueueType } from "./lock.type";
-import { ILock } from "../interfaces/lock";
+import { LockController } from "../locks/lock-controller";
+import { QueueType } from "../locks/lock-controller.type";
 
 export type TaskEntry = {
   arg?: any | undefined;
@@ -17,9 +17,7 @@ export type TaskOptions = {
   signal?: AbortSignal;
 };
 
-export type TaskExecutorMutexOptions = TaskOptions & { queueType?: QueueType };
-
-export type TaskExecutorPoolOptions = TaskExecutorMutexOptions & { concurrentLimit?: number };
+export type TaskControllerOptions = TaskOptions & { queueType?: QueueType, concurrency?: number };
 
 export type TaskTimeoutHandler = (taskEntry: TaskEntry) => void;
 export type ErrorHandler = (taskEntry: TaskEntry, error: any) => void;
@@ -32,5 +30,5 @@ export type TaskEventError = { code: TaskErrorCode; error: any };
 export type ReleaseBeforeFinishReason = "timeoutReached" | "forced";
 export type DiscardReason = "timeoutReached" | "forced" | "abortSignal";
 
-export type TaskExecutorMultiStepOptions = { stepConcurrentLimits: number[] };
-export type MultiStepTask<T> = (...stepLocks: ILock[]) => Promise<T>;
+export type MultiStepControllerOptions = { stepConcurrencies: number[] };
+export type MultiStepTask<T> = (...stepLocks: LockController[]) => Promise<T>;

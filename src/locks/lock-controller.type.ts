@@ -5,8 +5,7 @@
 export type ReleaseFunction = { (): void };
 export type QueueType = "FIFO" | "LIFO";
 export type TimeoutHandler = () => void;
-export type LockOptions = { queueType?: QueueType; releaseTimeout?: number; releaseTimeoutHandler?: TimeoutHandler };
-export type LockPoolOptions = LockOptions & { concurrentLimit?: number };
+export type LockControllerOptions = { queueType?: QueueType; releaseTimeout?: number; releaseTimeoutHandler?: TimeoutHandler, concurrentLimit?: number };
 export type TryAcquireResponse = { acquired: true; release: ReleaseFunction } | { acquired: false; release?: undefined };
 export type LockEvent = "error" | "lock-acquired" | "lock-released";
 export type LockErrorCode = "release-timeout-handler-failure";

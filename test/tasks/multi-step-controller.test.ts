@@ -1,14 +1,14 @@
 import { setTimeout } from "timers/promises";
-import { ILock } from "../../src/interfaces/lock";
-import { TaskExecutorMultiStep } from "../../src/task-executors/task-executor-multi-step";
+import { LockController } from "../../src/locks/lock-controller";
+import { MultiStepController } from "../../src/tasks/multi-step-controller";
 
 function task(
   result: string,
   timeout: number,
   stepResultsArray: string[][] | null,
-  stepLock1: ILock,
-  stepLock2: ILock,
-  stepLock3: ILock
+  stepLock1: LockController,
+  stepLock2: LockController,
+  stepLock3: LockController
 ): Promise<string> {
   return new Promise<string>(async (resolve, reject) => {
     const release1 = await stepLock1.acquire();
@@ -46,7 +46,7 @@ function task(
 }
 
 test("promise multi step: prevent or allow limited concurrent step execution", async () => {
-  const taskExecutor = new TaskExecutorMultiStep<string>({ stepConcurrentLimits: [1, 2, 2] });
+  const taskExecutor = new MultiStepController<string>({ stepConcurrencies: [1, 2, 2] });
   const stepResultsArray = new Array<string[]>();
   const resultsStep1 = new Array<string>();
   const resultsStep2 = new Array<string>();
@@ -56,9 +56,9 @@ test("promise multi step: prevent or allow limited concurrent step execution", a
   stepResultsArray.push(resultsStep3);
 
   await taskExecutor.runMany([
-    (stepLock1: ILock, stepLock2: ILock, stepLock3: ILock) => task("A", 140, stepResultsArray, stepLock1, stepLock2, stepLock3),
-    (stepLock1: ILock, stepLock2: ILock, stepLock3: ILock) => task("B", 40, stepResultsArray, stepLock1, stepLock2, stepLock3),
-    (stepLock1: ILock, stepLock2: ILock, stepLock3: ILock) => task("C", 5, stepResultsArray, stepLock1, stepLock2, stepLock3),
+    (stepLock1: LockController, stepLock2: LockController, stepLock3: LockController) => task("A", 140, stepResultsArray, stepLock1, stepLock2, stepLock3),
+    (stepLock1: LockController, stepLock2: LockController, stepLock3: LockController) => task("B", 40, stepResultsArray, stepLock1, stepLock2, stepLock3),
+    (stepLock1: LockController, stepLock2: LockController, stepLock3: LockController) => task("C", 5, stepResultsArray, stepLock1, stepLock2, stepLock3),
   ]);
 
   expect(resultsStep1[0]).toBe("A");
@@ -74,8 +74,8 @@ test("promise multi step: prevent or allow limited concurrent step execution", a
   expect(resultsStep3[2]).toBe("A");
 });
 
-test("promise multi step: method run", async () => {
-  const taskExecutor = new TaskExecutorMultiStep<string>({ stepConcurrentLimits: [1, 2, 2] });
+test("multiStepController: method run", async () => {
+  const taskExecutor = new MultiStepController<string>({ stepConcurrencies: [1, 2, 2] });
   const stepResultsArray = new Array<string[]>();
   const resultsStep1 = new Array<string>();
   const resultsStep2 = new Array<string>();
@@ -84,13 +84,13 @@ test("promise multi step: method run", async () => {
   stepResultsArray.push(resultsStep2);
   stepResultsArray.push(resultsStep3);
 
-  taskExecutor.run((stepLock1: ILock, stepLock2: ILock, stepLock3: ILock) =>
+  taskExecutor.run((stepLock1: LockController, stepLock2: LockController, stepLock3: LockController) =>
     task("A", 140, stepResultsArray, stepLock1, stepLock2, stepLock3)
   );
-  taskExecutor.run((stepLock1: ILock, stepLock2: ILock, stepLock3: ILock) =>
+  taskExecutor.run((stepLock1: LockController, stepLock2: LockController, stepLock3: LockController) =>
     task("B", 40, stepResultsArray, stepLock1, stepLock2, stepLock3)
   );
-  taskExecutor.run((stepLock1: ILock, stepLock2: ILock, stepLock3: ILock) =>
+  taskExecutor.run((stepLock1: LockController, stepLock2: LockController, stepLock3: LockController) =>
     task("C", 5, stepResultsArray, stepLock1, stepLock2, stepLock3)
   );
 
@@ -109,12 +109,12 @@ test("promise multi step: method run", async () => {
   expect(resultsStep3[2]).toBe("A");
 });
 
-test("promise multi step: releaseAll", async () => {
-  const taskExecutor = new TaskExecutorMultiStep<string>({ stepConcurrentLimits: [1, 1, 1] });
+test("multiStepController: releaseAll", async () => {
+  const taskExecutor = new MultiStepController<string>({ stepConcurrencies: [1, 1, 1] });
 
-  taskExecutor.run((stepLock1: ILock, stepLock2: ILock, stepLock3: ILock) => task("A", 50, null, stepLock1, stepLock2, stepLock3));
-  taskExecutor.run((stepLock1: ILock, stepLock2: ILock, stepLock3: ILock) => task("B", 50, null, stepLock1, stepLock2, stepLock3));
-  taskExecutor.run((stepLock1: ILock, stepLock2: ILock, stepLock3: ILock) => task("C", 50, null, stepLock1, stepLock2, stepLock3));
+  taskExecutor.run((stepLock1: LockController, stepLock2: LockController, stepLock3: LockController) => task("A", 50, null, stepLock1, stepLock2, stepLock3));
+  taskExecutor.run((stepLock1: LockController, stepLock2: LockController, stepLock3: LockController) => task("B", 50, null, stepLock1, stepLock2, stepLock3));
+  taskExecutor.run((stepLock1: LockController, stepLock2: LockController, stepLock3: LockController) => task("C", 50, null, stepLock1, stepLock2, stepLock3));
 
   await setTimeout(145, undefined);
 
@@ -137,8 +137,8 @@ test("promise multi step: releaseAll", async () => {
   expect(step3LockLimitReachedAfterRelease).toBe(false);
 });
 
-test("promise multi step: isStepLockLimitReached (not exist step)", async () => {
-  const taskExecutor = new TaskExecutorMultiStep<string>({ stepConcurrentLimits: [1, 1, 1] });
+test("multiStepController: isStepLockLimitReached (not exist step)", async () => {
+  const taskExecutor = new MultiStepController<string>({ stepConcurrencies: [1, 1, 1] });
 
   const notExistStepLockLimitReached = taskExecutor.isStepLockLimitReached(4);
 

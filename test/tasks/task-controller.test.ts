@@ -1,20 +1,21 @@
 import { setTimeout } from "timers/promises";
-import { TaskExecutorMutex } from "../../src/task-executors/task-executor-mutex";
-import { DiscardReason, ReleaseBeforeFinishReason, TaskEntry, TaskEventError } from "../../src/types/task-executor.type";
+import { TaskController } from "../../src/tasks/task-controller";
+import { DiscardReason, ReleaseBeforeFinishReason, TaskEntry, TaskEventError } from "../../src/tasks/task-controller.type";
 
 function task(result: string, timeout: number, resultsInOrder?: string[]): Promise<string> {
-  return new Promise<string>(async (resolve, reject) => {
+  return new Promise<string>(async (resolve) => {
     await setTimeout(timeout, undefined);
 
     if (resultsInOrder) {
       resultsInOrder.push(result);
     }
+
     resolve(result);
   });
 }
 
-test("taskExecutor: prevent concurrent task execution (default options)", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
+test("taskController: prevent concurrent task execution (default options)", async () => {
+  const taskExecutor = new TaskController<string>();
   const resultsInOrder = new Array<string>();
 
   await taskExecutor.runMany([
@@ -28,8 +29,8 @@ test("taskExecutor: prevent concurrent task execution (default options)", async 
   expect(resultsInOrder[2]).toBe("C");
 });
 
-test("taskExecutor: prevent concurrent task execution FIFO", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>({ queueType: "FIFO" });
+test("taskController: prevent concurrent task execution FIFO", async () => {
+  const taskExecutor = new TaskController<string>({ queueType: "FIFO" });
   const resultsInOrder = new Array<string>();
 
   await taskExecutor.runMany([
@@ -43,8 +44,8 @@ test("taskExecutor: prevent concurrent task execution FIFO", async () => {
   expect(resultsInOrder[2]).toBe("C");
 });
 
-test("taskExecutor: prevent concurrent task execution LIFO", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>({ queueType: "LIFO" });
+test("taskController: prevent concurrent task execution LIFO", async () => {
+  const taskExecutor = new TaskController<string>({ queueType: "LIFO" });
   const resultsInOrder = new Array<string>();
 
   await taskExecutor.runMany([
@@ -58,8 +59,8 @@ test("taskExecutor: prevent concurrent task execution LIFO", async () => {
   expect(resultsInOrder[2]).toBe("B");
 });
 
-test("taskExecutor: method run", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
+test("taskController: method run", async () => {
+  const taskExecutor = new TaskController<string>();
   const resultsInOrder = new Array<string>();
 
   taskExecutor.run(() => task("A", 120, resultsInOrder));
@@ -73,8 +74,8 @@ test("taskExecutor: method run", async () => {
   expect(resultsInOrder[2]).toBe("C");
 });
 
-test("taskExecutor: listen 'task-started' even", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
+test("taskController: listen 'task-started' even", async () => {
+  const taskExecutor = new TaskController<string>();
   let taskStartedEventTriggered = false;
   taskExecutor.on("task-started", () => {
     taskStartedEventTriggered = true;
@@ -85,8 +86,8 @@ test("taskExecutor: listen 'task-started' even", async () => {
   expect(taskStartedEventTriggered).toBe(true);
 });
 
-test("taskExecutor: event listener off", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
+test("taskController: event listener off", async () => {
+  const taskExecutor = new TaskController<string>();
   let taskStartedEventTriggered = false;
   const lockAcquiredListener = () => {
     taskStartedEventTriggered = true;
@@ -99,8 +100,8 @@ test("taskExecutor: event listener off", async () => {
   expect(taskStartedEventTriggered).toBe(false);
 });
 
-test("taskExecutor: listen 'task-finished' even", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
+test("taskController: listen 'task-finished' even", async () => {
+  const taskExecutor = new TaskController<string>();
   let taskFinishedEventTriggered = false;
   taskExecutor.on("task-finished", () => {
     taskFinishedEventTriggered = true;
@@ -112,8 +113,8 @@ test("taskExecutor: listen 'task-finished' even", async () => {
   expect(taskFinishedEventTriggered).toBe(true);
 });
 
-test("taskExecutor: listen 'task-failure' even", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
+test("taskController: listen 'task-failure' even", async () => {
+  const taskExecutor = new TaskController<string>();
   let taskFailureEventTriggered = false;
   let taskFailureErrorMessage: string | undefined;
   taskExecutor.on("task-failure", (taskEntry, error) => {
@@ -135,8 +136,8 @@ test("taskExecutor: listen 'task-failure' even", async () => {
   }
 });
 
-test("taskExecutor: listen 'task-released-before-finished' even (release-timeout)", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>({ releaseTimeout: 10 });
+test("taskController: listen 'task-released-before-finished' even (release-timeout)", async () => {
+  const taskExecutor = new TaskController<string>({ releaseTimeout: 10 });
   let taskReleasedBeforeFinishedEventTriggered = false;
   let releaseReason: ReleaseBeforeFinishReason | undefined;
   taskExecutor.on("task-released-before-finished", (taskEntry) => {
@@ -155,8 +156,8 @@ test("taskExecutor: listen 'task-released-before-finished' even (release-timeout
   }
 });
 
-test("taskExecutor: listen 'task-released-before-finished' even (forced)", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
+test("taskController: listen 'task-released-before-finished' even (forced)", async () => {
+  const taskExecutor = new TaskController<string>();
   let taskReleasedBeforeFinishedEventTriggered = false;
   let releaseReason: ReleaseBeforeFinishReason | undefined;
   taskExecutor.on("task-released-before-finished", (taskEntry) => {
@@ -175,8 +176,8 @@ test("taskExecutor: listen 'task-released-before-finished' even (forced)", async
   }
 });
 
-test("taskExecutor: listen 'task-discarded' even (timeoutReached)", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>({ waitingTimeout: 30 });
+test("taskController: listen 'task-discarded' even (timeoutReached)", async () => {
+  const taskExecutor = new TaskController<string>({ waitingTimeout: 30 });
   let taskDiscardedEventTriggered = false;
   let discardReason: DiscardReason | undefined;
   let discardedTaskArg: string | undefined;
@@ -204,8 +205,8 @@ test("taskExecutor: listen 'task-discarded' even (timeoutReached)", async () => 
   }
 });
 
-test("taskExecutor: listen 'task-discarded' even (forced)", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
+test("taskController: listen 'task-discarded' even (forced)", async () => {
+  const taskExecutor = new TaskController<string>();
   let taskDiscardedEventTriggered = false;
   let discardReason: DiscardReason | undefined;
   let discardedTaskArg: string | undefined;
@@ -235,10 +236,10 @@ test("taskExecutor: listen 'task-discarded' even (forced)", async () => {
   }
 });
 
-test("taskExecutor: listen 'task-discarded' even (abortSignal)", async () => {
+test("taskController: listen 'task-discarded' even (abortSignal)", async () => {
   const abortController = new AbortController();
 
-  const taskExecutor = new TaskExecutorMutex<string>({ signal: abortController.signal });
+  const taskExecutor = new TaskController<string>({ signal: abortController.signal });
   let taskDiscardedEventTriggered = false;
   let discardReason: DiscardReason | undefined;
   let discardedTaskArg: string | undefined;
@@ -268,8 +269,8 @@ test("taskExecutor: listen 'task-discarded' even (abortSignal)", async () => {
   }
 });
 
-test("taskExecutor: tryRun true", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
+test("taskController: tryRun true", async () => {
+  const taskExecutor = new TaskController<string>();
 
   const { available, run } = taskExecutor.tryRun((arg) => task(arg, 100), "A");
   if (available) {
@@ -280,8 +281,8 @@ test("taskExecutor: tryRun true", async () => {
   expect(taskExecutor.runningTasks()).toBe(1);
 });
 
-test("taskExecutor: tryRun false (conncurrentLimitReached)", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
+test("taskController: tryRun false (conncurrentLimitReached)", async () => {
+  const taskExecutor = new TaskController<string>();
 
   const { available, run } = taskExecutor.tryRun((arg) => task(arg, 20), "A");
   if (available) {
@@ -293,8 +294,8 @@ test("taskExecutor: tryRun false (conncurrentLimitReached)", async () => {
   expect(runB).toBe(undefined);
 });
 
-test("taskExecutor: tryRun false (someOneIsWaitingTheLock)", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
+test("taskController: tryRun false (someOneIsWaitingTheLock)", async () => {
+  const taskExecutor = new TaskController<string>();
 
   const { available, run } = taskExecutor.tryRun((arg) => task(arg, 20), "A");
   if (available) {
@@ -307,7 +308,7 @@ test("taskExecutor: tryRun false (someOneIsWaitingTheLock)", async () => {
   expect(runC).toBe(undefined);
 });
 
-test("taskExecutor: releaseTimeoutHandler triggered", async () => {
+test("taskController: releaseTimeoutHandler triggered", async () => {
   let timeoutHandlerTriggered = false;
   let taskArg: string | undefined;
   const timeoutHandler = (taskEntry: TaskEntry) => {
@@ -315,7 +316,7 @@ test("taskExecutor: releaseTimeoutHandler triggered", async () => {
     taskArg = taskEntry.arg;
   };
 
-  const taskExecutor = new TaskExecutorMutex({ releaseTimeout: 50, releaseTimeoutHandler: timeoutHandler });
+  const taskExecutor = new TaskController({ releaseTimeout: 50, releaseTimeoutHandler: timeoutHandler });
   taskExecutor.run((arg) => task(arg, 100), "A");
 
   await setTimeout(70, undefined);
@@ -328,13 +329,13 @@ test("taskExecutor: releaseTimeoutHandler triggered", async () => {
   }
 });
 
-test("taskExecutor: releaseTimeoutHandler not triggered", async () => {
+test("taskController: releaseTimeoutHandler not triggered", async () => {
   let timeoutHandlerTriggered = false;
   const timeoutHandler = () => {
     timeoutHandlerTriggered = true;
   };
 
-  const taskExecutor = new TaskExecutorMutex({ releaseTimeout: 100, releaseTimeoutHandler: timeoutHandler });
+  const taskExecutor = new TaskController({ releaseTimeout: 100, releaseTimeoutHandler: timeoutHandler });
   taskExecutor.run((arg) => task(arg, 200), "A");
 
   await setTimeout(70, undefined);
@@ -342,12 +343,12 @@ test("taskExecutor: releaseTimeoutHandler not triggered", async () => {
   expect(timeoutHandlerTriggered).toBe(false);
 });
 
-test("taskExecutor: listen 'error' event (release-timeout-handler-failure)", async () => {
+test("taskController: listen 'error' event (release-timeout-handler-failure)", async () => {
   const timeoutHandler = () => {
     throw Error("unexpected error on timeoutHandler");
   };
 
-  const taskExecutor = new TaskExecutorMutex({ releaseTimeout: 50, releaseTimeoutHandler: timeoutHandler });
+  const taskExecutor = new TaskController({ releaseTimeout: 50, releaseTimeoutHandler: timeoutHandler });
   let errorEventTriggered = false;
   let taskEventError: TaskEventError | undefined;
   let taskArg: string | undefined;
@@ -373,7 +374,7 @@ test("taskExecutor: listen 'error' event (release-timeout-handler-failure)", asy
   }
 });
 
-test("taskExecutor: waitingTimeoutHandler triggered", async () => {
+test("taskController: waitingTimeoutHandler triggered", async () => {
   let timeoutHandlerTriggered = false;
   let taskArg: string | undefined;
   const timeoutHandler = (taskEntry: TaskEntry) => {
@@ -381,7 +382,7 @@ test("taskExecutor: waitingTimeoutHandler triggered", async () => {
     taskArg = taskEntry.arg;
   };
 
-  const taskExecutor = new TaskExecutorMutex({ waitingTimeout: 50, waitingTimeoutHandler: timeoutHandler });
+  const taskExecutor = new TaskController({ waitingTimeout: 50, waitingTimeoutHandler: timeoutHandler });
   taskExecutor.run((arg) => task(arg, 60), "A");
   taskExecutor.run((arg) => task(arg, 100), "B");
 
@@ -395,14 +396,14 @@ test("taskExecutor: waitingTimeoutHandler triggered", async () => {
   }
 });
 
-test("taskExecutor: waitingTimeoutHandler not triggered", async () => {
+test("taskController: waitingTimeoutHandler not triggered", async () => {
   let timeoutHandlerTriggered = false;
 
   const timeoutHandler = () => {
     timeoutHandlerTriggered = true;
   };
 
-  const taskExecutor = new TaskExecutorMutex({ waitingTimeout: 100, waitingTimeoutHandler: timeoutHandler });
+  const taskExecutor = new TaskController({ waitingTimeout: 100, waitingTimeoutHandler: timeoutHandler });
   taskExecutor.run((arg) => task(arg, 50), "A");
   taskExecutor.run((arg) => task(arg, 50), "B");
 
@@ -411,14 +412,14 @@ test("taskExecutor: waitingTimeoutHandler not triggered", async () => {
   expect(timeoutHandlerTriggered).toBe(false);
 });
 
-test("taskExecutor: waitingTimeoutHandler not triggered (flushPendingTasks)", async () => {
+test("taskController: waitingTimeoutHandler not triggered (flushPendingTasks)", async () => {
   let timeoutHandlerTriggered = false;
 
   const timeoutHandler = () => {
     timeoutHandlerTriggered = true;
   };
 
-  const taskExecutor = new TaskExecutorMutex({ waitingTimeout: 100, waitingTimeoutHandler: timeoutHandler });
+  const taskExecutor = new TaskController({ waitingTimeout: 100, waitingTimeoutHandler: timeoutHandler });
   taskExecutor.run((arg) => task(arg, 50), "A");
   taskExecutor.run((arg) => task(arg, 50), "B");
 
@@ -429,12 +430,12 @@ test("taskExecutor: waitingTimeoutHandler not triggered (flushPendingTasks)", as
   expect(timeoutHandlerTriggered).toBe(false);
 });
 
-test("taskExecutor: listen 'error' event (waiting-timeout-handler-failure)", async () => {
+test("taskController: listen 'error' event (waiting-timeout-handler-failure)", async () => {
   const timeoutHandler = () => {
     throw Error("unexpected error on timeoutHandler");
   };
 
-  const taskExecutor = new TaskExecutorMutex({ waitingTimeout: 50, waitingTimeoutHandler: timeoutHandler });
+  const taskExecutor = new TaskController({ waitingTimeout: 50, waitingTimeoutHandler: timeoutHandler });
   let errorEventTriggered = false;
   let taskEventError: TaskEventError | undefined;
   let taskArg: string | undefined;
@@ -461,12 +462,12 @@ test("taskExecutor: listen 'error' event (waiting-timeout-handler-failure)", asy
   }
 });
 
-test("taskExecutor: listen 'error' event (error-handler-failure)", async () => {
+test("taskController: listen 'error' event (error-handler-failure)", async () => {
   const errorHandler = (taskEntry: TaskEntry, error: any) => {
     throw Error("unexpected error on timeoutHandler");
   };
 
-  const taskExecutor = new TaskExecutorMutex({ errorHandler });
+  const taskExecutor = new TaskController({ errorHandler });
   let errorEventTriggered = false;
   let taskEventError: TaskEventError | undefined;
   let taskArg: string | undefined;
@@ -495,8 +496,8 @@ test("taskExecutor: listen 'error' event (error-handler-failure)", async () => {
   }
 });
 
-test("taskExecutor: releaseRunningTasks (runningTasks > 0)", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
+test("taskController: releaseRunningTasks (runningTasks > 0)", async () => {
+  const taskExecutor = new TaskController<string>();
 
   taskExecutor.run(() => task("A", 100));
 
@@ -508,8 +509,8 @@ test("taskExecutor: releaseRunningTasks (runningTasks > 0)", async () => {
   expect(runningTaskAfterRelease).toBe(0);
 });
 
-test("taskExecutor: releaseRunningTasks (runningTasks = 0)", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
+test("taskController: releaseRunningTasks (runningTasks = 0)", async () => {
+  const taskExecutor = new TaskController<string>();
 
   const runningTaskBeforeRelease = taskExecutor.runningTasks();
   taskExecutor.releaseRunningTasks();
@@ -519,8 +520,8 @@ test("taskExecutor: releaseRunningTasks (runningTasks = 0)", async () => {
   expect(runningTaskAfterRelease).toBe(0);
 });
 
-test("taskExecutor: waitingTasks", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
+test("taskController: waitingTasks", async () => {
+  const taskExecutor = new TaskController<string>();
 
   taskExecutor.run(() => task("A", 100));
   taskExecutor.run(() => task("B", 100));
@@ -533,8 +534,8 @@ test("taskExecutor: waitingTasks", async () => {
   expect(waitingTaskAfterRelease).toBe(0);
 });
 
-test("taskExecutor: flushPendingTasks (waitingTasks > 0)", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
+test("taskController: flushPendingTasks (waitingTasks > 0)", async () => {
+  const taskExecutor = new TaskController<string>();
 
   taskExecutor.run(() => task("A", 100));
   taskExecutor.run(() => task("B", 100));
@@ -547,8 +548,8 @@ test("taskExecutor: flushPendingTasks (waitingTasks > 0)", async () => {
   expect(waitingTaskAfterRelease).toBe(0);
 });
 
-test("taskExecutor: flushPendingTasks (waitingTasks = 0)", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
+test("taskController: flushPendingTasks (waitingTasks = 0)", async () => {
+  const taskExecutor = new TaskController<string>();
 
   const waitingTaskBeforeRelease = taskExecutor.waitingTasks();
   taskExecutor.flushPendingTasks();
@@ -558,8 +559,8 @@ test("taskExecutor: flushPendingTasks (waitingTasks = 0)", async () => {
   expect(waitingTaskAfterRelease).toBe(0);
 });
 
-test("taskExecutor: expiredTasks", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
+test("taskController: expiredTasks", async () => {
+  const taskExecutor = new TaskController<string>();
 
   taskExecutor.run(() => task("A", 100));
 
@@ -571,21 +572,8 @@ test("taskExecutor: expiredTasks", async () => {
   expect(expiredTaskAfterRelease).toBe(1);
 });
 
-test("taskExecutor: changeConcurrentLimit (PromiseMutex)", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
-
-  taskExecutor.run(() => task("A", 100));
-
-  const runningLimitReachedBeforeChangeConcurrentLimit = !taskExecutor.isAvailable();
-  taskExecutor.changeConcurrentLimit(2);
-  const runningLimitReachedAfterChangeConcurrentLimit = !taskExecutor.isAvailable();
-
-  expect(runningLimitReachedBeforeChangeConcurrentLimit).toBe(true);
-  expect(runningLimitReachedAfterChangeConcurrentLimit).toBe(true);
-});
-
-test("taskExecutor: TaskOptions (waitingTimeout)", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
+test("taskController: TaskOptions (waitingTimeout)", async () => {
+  const taskExecutor = new TaskController<string>();
 
   let taskDiscardedEventTriggered = false;
   let discardReason: DiscardReason | undefined;
@@ -614,8 +602,8 @@ test("taskExecutor: TaskOptions (waitingTimeout)", async () => {
   }
 });
 
-test("taskExecutor: TaskOptions (waitingTimeout, waitingTimeoutHandler)", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
+test("taskController: TaskOptions (waitingTimeout, waitingTimeoutHandler)", async () => {
+  const taskExecutor = new TaskController<string>();
 
   let timeoutHandlerTriggered = false;
   let taskArg: string | undefined;
@@ -637,8 +625,8 @@ test("taskExecutor: TaskOptions (waitingTimeout, waitingTimeoutHandler)", async 
   }
 });
 
-test("taskExecutor: TaskOptions (errorHandler)", async () => {
-  const taskExecutor = new TaskExecutorMutex<string>();
+test("taskController: TaskOptions (errorHandler)", async () => {
+  const taskExecutor = new TaskController<string>();
 
   let errorEventTriggered = false;
   let taskArg: string | undefined;
@@ -673,7 +661,7 @@ test("taskExecutor: TaskOptions (errorHandler)", async () => {
   }
 });
 
-test("taskExecutor: TaskOptions (releaseTimeout, releaseTimeoutHandler)", async () => {
+test("taskController: TaskOptions (releaseTimeout, releaseTimeoutHandler)", async () => {
   let timeoutHandlerTriggered = false;
   let taskArg: string | undefined;
   const timeoutHandler = (taskEntry: TaskEntry) => {
@@ -681,7 +669,7 @@ test("taskExecutor: TaskOptions (releaseTimeout, releaseTimeoutHandler)", async 
     taskArg = taskEntry.arg;
   };
 
-  const taskExecutor = new TaskExecutorMutex();
+  const taskExecutor = new TaskController();
   taskExecutor.run((arg) => task(arg, 100), "A", { releaseTimeout: 50, releaseTimeoutHandler: timeoutHandler });
 
   await setTimeout(70, undefined);
@@ -694,10 +682,10 @@ test("taskExecutor: TaskOptions (releaseTimeout, releaseTimeoutHandler)", async 
   }
 });
 
-test("taskExecutor: TaskOptions (signal)", async () => {
+test("taskController: TaskOptions (signal)", async () => {
   const abortController = new AbortController();
 
-  const taskExecutor = new TaskExecutorMutex<string>();
+  const taskExecutor = new TaskController<string>();
   let taskDiscardedEventTriggered = false;
   let discardReason: DiscardReason | undefined;
   let discardedTaskArg: string | undefined;
@@ -725,4 +713,159 @@ test("taskExecutor: TaskOptions (signal)", async () => {
   } else {
     fail("discardedTaskArg missed");
   }
+});
+
+test("taskController: allow limited concurrent task execution", async () => {
+  const taskExecutor = new TaskController<string>({ concurrency: 2 });
+  const resultsInOrder = new Array<string>();
+
+  await taskExecutor.runMany([
+    () => task("A", 120, resultsInOrder),
+    () => task("B", 60, resultsInOrder),
+    () => task("C", 10, resultsInOrder),
+  ]);
+
+  expect(resultsInOrder[0]).toBe("B");
+  expect(resultsInOrder[1]).toBe("C");
+  expect(resultsInOrder[2]).toBe("A");
+});
+
+test("taskController: runMany arguments", async () => {
+  const taskExecutor = new TaskController<string>({ concurrency: 2 });
+  const resultsInOrder = new Array<string>();
+
+  await taskExecutor.runMany(
+    [(arg) => task(arg, 120, resultsInOrder), (arg) => task(arg, 60, resultsInOrder), (arg) => task(arg, 10, resultsInOrder)],
+    ["A", "B"]
+  );
+
+  expect(resultsInOrder[0]).toBe("B");
+  expect(resultsInOrder[1]).toBe(undefined);
+  expect(resultsInOrder[2]).toBe("A");
+});
+
+test("taskController: default options", async () => {
+  const taskExecutor = new TaskController<string>();
+  const resultsInOrder = new Array<string>();
+
+  await taskExecutor.runMany([
+    () => task("A", 120, resultsInOrder),
+    () => task("B", 60, resultsInOrder),
+    () => task("C", 10, resultsInOrder),
+  ]);
+
+  expect(resultsInOrder[0]).toBe("A");
+  expect(resultsInOrder[1]).toBe("B");
+  expect(resultsInOrder[2]).toBe("C");
+});
+
+test("taskController: invalid options", async () => {
+  const taskExecutor = new TaskController<string>({ concurrency: "5" } as any);
+  const resultsInOrder = new Array<string>();
+
+  await taskExecutor.runMany([
+    () => task("A", 120, resultsInOrder),
+    () => task("B", 60, resultsInOrder),
+    () => task("C", 10, resultsInOrder),
+  ]);
+
+  expect(resultsInOrder[0]).toBe("A");
+  expect(resultsInOrder[1]).toBe("B");
+  expect(resultsInOrder[2]).toBe("C");
+});
+
+test("taskController: method run", async () => {
+  const taskExecutor = new TaskController<string>({ concurrency: 2 });
+  const resultsInOrder = new Array<string>();
+
+  taskExecutor.run(() => task("A", 120, resultsInOrder));
+  taskExecutor.run(() => task("B", 60, resultsInOrder));
+  taskExecutor.run(() => task("C", 10, resultsInOrder));
+
+  await setTimeout(250, undefined);
+
+  expect(resultsInOrder[0]).toBe("B");
+  expect(resultsInOrder[1]).toBe("C");
+  expect(resultsInOrder[2]).toBe("A");
+});
+
+test("taskController: changeConcurrentLimit", async () => {
+  const taskExecutor = new TaskController<string>({ concurrency: 1 });
+  taskExecutor.run(() => task("A", 120));
+
+  const runningLimitReachedBeforeChangeConcurrentLimit = !taskExecutor.isAvailable();
+  taskExecutor.changeConcurrentLimit(2);
+  const runningLimitReachedAfterChangeConcurrentLimit = !taskExecutor.isAvailable();
+
+  expect(runningLimitReachedBeforeChangeConcurrentLimit).toBe(true);
+  expect(runningLimitReachedAfterChangeConcurrentLimit).toBe(false);
+});
+
+test("taskController: concurrency (NaN)", async () => {
+  const taskExecutor = new TaskController<string>({ concurrency: NaN });
+
+  const runningLimitReachedBeforeRuntask = !taskExecutor.isAvailable();
+  taskExecutor.run(() => task("A", 120));
+  const runningLimitReachedAfterRuntask = !taskExecutor.isAvailable();
+
+  expect(runningLimitReachedBeforeRuntask).toBe(false);
+  expect(runningLimitReachedAfterRuntask).toBe(true);
+});
+
+test("taskController: concurrency (Infinity)", async () => {
+  const taskExecutor = new TaskController<string>({ concurrency: Infinity });
+
+  const runningLimitReachedBeforeRuntask = !taskExecutor.isAvailable();
+  taskExecutor.run(() => task("A", 120));
+  const runningLimitReachedAfterRuntask = !taskExecutor.isAvailable();
+
+  expect(runningLimitReachedBeforeRuntask).toBe(false);
+  expect(runningLimitReachedAfterRuntask).toBe(true);
+});
+
+test("taskController: concurrency (Infinity)", async () => {
+  const taskExecutor = new TaskController<string>({ concurrency: 0.9 });
+
+  const runningLimitReachedBeforeRuntask = !taskExecutor.isAvailable();
+  taskExecutor.run(() => task("A", 120));
+  const runningLimitReachedAfterRuntask = !taskExecutor.isAvailable();
+
+  expect(runningLimitReachedBeforeRuntask).toBe(false);
+  expect(runningLimitReachedAfterRuntask).toBe(true);
+});
+
+test("taskController: changeConcurrentLimit (null)", async () => {
+  const taskExecutor = new TaskController<string>();
+  taskExecutor.changeConcurrentLimit(null as unknown as number);
+
+  const runningLimitReachedBeforeRuntask = !taskExecutor.isAvailable();
+  taskExecutor.run(() => task("A", 120));
+  const runningLimitReachedAfterRuntask = !taskExecutor.isAvailable();
+
+  expect(runningLimitReachedBeforeRuntask).toBe(false);
+  expect(runningLimitReachedAfterRuntask).toBe(true);
+});
+
+test("taskController: changeConcurrentLimit (NaN)", async () => {
+  const taskExecutor = new TaskController<string>();
+  taskExecutor.changeConcurrentLimit(NaN);
+
+  const runningLimitReachedBeforeRuntask = !taskExecutor.isAvailable();
+  taskExecutor.run(() => task("A", 120));
+  const runningLimitReachedAfterRuntask = !taskExecutor.isAvailable();
+
+  expect(runningLimitReachedBeforeRuntask).toBe(false);
+  expect(runningLimitReachedAfterRuntask).toBe(true);
+});
+
+test("taskController: changeConcurrentLimit (0)", async () => {
+  const taskExecutor = new TaskController<string>();
+  taskExecutor.changeConcurrentLimit(0);
+
+  const runningLimitReachedBeforeRuntask = !taskExecutor.isAvailable();
+  taskExecutor.run(() => task("A", 120));
+  const runningLimitReachedAfterRuntask = !taskExecutor.isAvailable();
+
+  expect(runningLimitReachedBeforeRuntask).toBe(false);
+  expect(runningLimitReachedAfterRuntask).toBe(true);
 });
