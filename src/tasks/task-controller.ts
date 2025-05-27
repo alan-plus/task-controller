@@ -55,7 +55,7 @@ export class TaskController<T> {
   }
 
   public async run<T>(task: (...args: any[]) => Promise<T>, ...args: any[]): Promise<PromiseSettledResult<T>> {
-    return await this.enqueueAndRun(task, undefined, args);
+    return await this.enqueueAndRun(task, undefined, ...args);
   }
 
   public async runWithOptions<T>(
@@ -63,7 +63,7 @@ export class TaskController<T> {
     options: TaskOptions,
     ...args: any[]
   ): Promise<PromiseSettledResult<T>> {
-    return await this.enqueueAndRun(task, OptionsSanitizerUtils.sanitize(options, defaultOptions), args);
+    return await this.enqueueAndRun(task, OptionsSanitizerUtils.sanitize(options, defaultOptions), ...args);
   }
 
   public async runMany<T>(
@@ -71,7 +71,12 @@ export class TaskController<T> {
   ): Promise<PromiseSettledResult<T>[]> {
     const promises = tasks.map((taskData) => {
       const { task, options, args } = taskData;
-      return this.enqueueAndRun(task, OptionsSanitizerUtils.sanitize(options, defaultOptions), args);
+      if(args){
+        return this.enqueueAndRun(task, OptionsSanitizerUtils.sanitize(options, defaultOptions), ...args);
+      }else{
+        return this.enqueueAndRun(task, OptionsSanitizerUtils.sanitize(options, defaultOptions));
+      }
+      
     });
 
     return Promise.all(promises);
@@ -85,7 +90,7 @@ export class TaskController<T> {
     const sanitizeOptions = OptionsSanitizerUtils.sanitize(options, defaultOptions);
 
     const promises = argsArray.map((args) => {
-      return this.enqueueAndRun(task, sanitizeOptions, args);
+      return this.enqueueAndRun(task, sanitizeOptions, ...args);
     });
 
     return Promise.all(promises);
@@ -212,9 +217,9 @@ export class TaskController<T> {
     options?: TaskOptions,
     ...args: any[]
   ): Promise<PromiseSettledResult<T>> {
-    const { release, taskEntry } = await this.acquire(options, args);
+    const { release, taskEntry } = await this.acquire(options, ...args);
     try {
-      const value = await task(taskEntry.args);
+      const value = taskEntry.args ? await task(...taskEntry.args) : await task();
 
       return { status: "fulfilled", value } as PromiseSettledResult<T>;
     } catch (error) {
