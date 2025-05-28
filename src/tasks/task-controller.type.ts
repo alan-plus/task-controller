@@ -2,7 +2,7 @@ import { LockController } from "../locks/lock-controller";
 import { QueueType } from "../locks/lock-controller.type";
 
 export type TaskEntry = {
-  args?: any[] | undefined;
+  args: any[];
   options?: TaskOptions | undefined;
   releaseReason?: ReleaseBeforeFinishReason;
   discardReason?: DiscardReason;

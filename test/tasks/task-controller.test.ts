@@ -14,6 +14,10 @@ function task(result: string, timeout: number, resultsInOrder?: string[]): Promi
   });
 }
 
+function taskEntity(entity: { result: string; timeout: number; resultsInOrder?: string[] }): Promise<string> {
+  return task(entity.result, entity.timeout, entity.resultsInOrder);
+}
+
 test("taskController: prevent concurrent task execution (default options)", async () => {
   const taskExecutor = new TaskController<string>();
   const resultsInOrder = new Array<string>();
@@ -27,6 +31,94 @@ test("taskController: prevent concurrent task execution (default options)", asyn
   expect(resultsInOrder[0]).toBe("A");
   expect(resultsInOrder[1]).toBe("B");
   expect(resultsInOrder[2]).toBe("C");
+});
+
+test("taskController: runMany without args", async () => {
+  const taskExecutor = new TaskController<string>();
+
+  let taskRan = false;
+
+  await taskExecutor.runMany([
+    {
+      task: async () => {
+        taskRan = true;
+      },
+    },
+  ]);
+
+  await setTimeout(10, undefined);
+
+  expect(taskRan).toBe(true);
+});
+
+test("taskController: runForEachArgs", async () => {
+  const taskExecutor = new TaskController<string>();
+  const resultsInOrder = new Array<string>();
+
+  const argsArray = [
+    ["A", 120, resultsInOrder],
+    ["B", 60, resultsInOrder],
+    ["C", 10, resultsInOrder],
+  ];
+
+  const response = await taskExecutor.runForEachArgs(argsArray, task);
+
+  expect(resultsInOrder[0]).toBe("A");
+  expect(resultsInOrder[1]).toBe("B");
+  expect(resultsInOrder[2]).toBe("C");
+
+  if (response[0]?.status === "fulfilled") {
+    expect(response[0].value).toBe("A");
+  } else {
+    fail("response[0] rejected");
+  }
+
+  if (response[1]?.status === "fulfilled") {
+    expect(response[1].value).toBe("B");
+  } else {
+    fail("response[1] rejected");
+  }
+
+  if (response[2]?.status === "fulfilled") {
+    expect(response[2].value).toBe("C");
+  } else {
+    fail("response[2] rejected");
+  }
+});
+
+test("taskController: runForEachEntity", async () => {
+  const taskExecutor = new TaskController<string>();
+  const resultsInOrder = new Array<string>();
+
+  const entities = [
+    { result: "A", timeout: 120, resultsInOrder: resultsInOrder },
+    { result: "B", timeout: 60, resultsInOrder: resultsInOrder },
+    { result: "C", timeout: 10, resultsInOrder: resultsInOrder },
+  ];
+
+  const response = await taskExecutor.runForEachEntity(entities, taskEntity);
+
+  expect(resultsInOrder[0]).toBe("A");
+  expect(resultsInOrder[1]).toBe("B");
+  expect(resultsInOrder[2]).toBe("C");
+
+  if (response[0]?.status === "fulfilled") {
+    expect(response[0].value).toBe("A");
+  } else {
+    fail("response[0] rejected");
+  }
+
+  if (response[1]?.status === "fulfilled") {
+    expect(response[1].value).toBe("B");
+  } else {
+    fail("response[1] rejected");
+  }
+
+  if (response[2]?.status === "fulfilled") {
+    expect(response[2].value).toBe("C");
+  } else {
+    fail("response[2] rejected");
+  }
 });
 
 test("taskController: prevent concurrent task execution FIFO", async () => {

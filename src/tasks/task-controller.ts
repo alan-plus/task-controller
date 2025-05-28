@@ -71,19 +71,19 @@ export class TaskController<T> {
   ): Promise<PromiseSettledResult<T>[]> {
     const promises = tasks.map((taskData) => {
       const { task, options, args } = taskData;
-      if(args){
+
+      if (args) {
         return this.enqueueAndRun(task, OptionsSanitizerUtils.sanitize(options, defaultOptions), ...args);
-      }else{
+      } else {
         return this.enqueueAndRun(task, OptionsSanitizerUtils.sanitize(options, defaultOptions));
       }
-      
     });
 
     return Promise.all(promises);
   }
 
-  public async runForEach<T>(
-    argsArray: any[],
+  public async runForEachArgs<T>(
+    argsArray: any[][],
     task: (...args: any[]) => Promise<T>,
     options?: TaskOptions
   ): Promise<PromiseSettledResult<T>[]> {
@@ -91,6 +91,20 @@ export class TaskController<T> {
 
     const promises = argsArray.map((args) => {
       return this.enqueueAndRun(task, sanitizeOptions, ...args);
+    });
+
+    return Promise.all(promises);
+  }
+
+  public async runForEachEntity<T, E>(
+    entities: E[],
+    task: (entity: E) => Promise<T>,
+    options?: TaskOptions
+  ): Promise<PromiseSettledResult<T>[]> {
+    const sanitizeOptions = OptionsSanitizerUtils.sanitize(options, defaultOptions);
+
+    const promises = entities.map((entity) => {
+      return this.enqueueAndRun(task, sanitizeOptions, entity);
     });
 
     return Promise.all(promises);
@@ -184,7 +198,7 @@ export class TaskController<T> {
     return this.internalEmitter.emit(event, ...args);
   }
 
-  private async acquire(options?: TaskOptions, ...args: any[]): Promise<AcquireResponse> {
+  private async acquire(options: TaskOptions | undefined, ...args: any[]): Promise<AcquireResponse> {
     return new Promise<AcquireResponse>((resolve, reject) => {
       const taskEntry: WaitingTask = { resolve, reject, args, options } satisfies WaitingTask;
       this.waitingQueue.push(taskEntry);
@@ -214,12 +228,12 @@ export class TaskController<T> {
 
   private async enqueueAndRun<T>(
     task: (...args: any[]) => Promise<T>,
-    options?: TaskOptions,
+    options: TaskOptions | undefined,
     ...args: any[]
   ): Promise<PromiseSettledResult<T>> {
     const { release, taskEntry } = await this.acquire(options, ...args);
     try {
-      const value = taskEntry.args ? await task(...taskEntry.args) : await task();
+      const value = await task(...taskEntry.args);
 
       return { status: "fulfilled", value } as PromiseSettledResult<T>;
     } catch (error) {
