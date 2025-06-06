@@ -17,51 +17,26 @@ const defaultOptions: Required<LockControllerOptions> = {
 } satisfies LockControllerOptions;
 
 /**
- * The LockController class can be used to allow limited concurrent access to a resource.
+ * The LockController class provides a mechanism to control concurrent access to resources.
  * ```js
  * import { LockController } from "task-controller";
  *
- *   // concurrent access to the resource limited to 2
- *   const lock = new LockController({ concurrentLimit: 2 });
+ * const lockController = new LockController();
  *
- *   await Promise.all([
- *
- *     // Task 1 (will access the resource immediately)
- *     new Promise<any>(async (resolve) => {
- *       const release = await lock.acquire();
- *       try {
- *         // access the protected resource
- *         resolve();
- *       } finally {
- *         release();
- *       }
- *     }),
- *
- *     // Task 2 (will access the resource immediately)
- *     new Promise<any>(async (resolve) => {
- *       const release = await lock.acquire();
- *       try {
- *         // access the protected resource
- *         resolve();
- *       } finally {
- *         release();
- *       }
- *     }),
- *
- *     // Task 3 (will access the resource once 'Task 1' or 'Task 2' is completed)
- *     new Promise<any>(async (resolve) => {
- *       const release = await lock.acquire();
- *       try {
- *         // access the protected resource
- *         resolve();
- *       } finally {
- *         release();
- *       }
- *     }),
- *   ]);
+ * const release = await lockController.acquire();
+ * console.log(`lock acquired`);
+ * 
+ * try {
+ *  // access the resource protected by this lock
+ *   await setTimeout(1, 'just to simulate some logic');
+ * } finally {
+ *  // IMPORTANT: Make sure to always call the `release` function.
+ *  release();
+ *  console.log(`lock released`);
+ * }
  * ```
  * @since v1.0.0
- * @see [source](https://github.com/alan-plus/tasktly/blob/v1.0.0/src/locks/lock-pool.ts)
+ * @see [source](https://github.com/alan-plus/task-controller/blob/v1.0.0/src/locks/lock-controller.ts)
  */
 export class LockController {
   private readonly options: Required<LockControllerOptions>;

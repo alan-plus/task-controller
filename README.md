@@ -4,9 +4,9 @@
 
 A set of classes that provide assistance with the concurrent access to shared resources and the control of asynchronous tasks.
 - Locks
-  - [LockController](#LockController): a class to control concurrent access to resources.
+  - [LockController](#LockController): a class that manages concurrent access to resources.
 - Tasks
-  - [TaskController](#TaskController): a class to control concurrent asynchronous tasks execution.
+  - [TaskController](#TaskController): a class that manages concurrent asynchronous tasks execution.
   - [MultiStepController](#MultiStepController): a class to adjust the concurrency at step level on multi step tasks execution.
 
 ## Getting started
@@ -39,44 +39,44 @@ Provides a mechanism to control concurrent access to resources.
 ```js
 import { LockController } from "task-controller";
 
-  async function exampleWithConcurrency(concurrency: number){
+export async function exampleLockControllerWithConcurrency(concurrency: number){
 
-    const lock = new LockController({ concurrency });
+  const lockController = new LockController({ concurrency });
 
-    const accessTheResource = async (id: number) => {
-      const release = await lock.acquire();
-      console.log(`${id} acquire the lock`);
-      try {
-        // access the resource protected by this lock
-        await setTimeout(1, 'just to simulate some logic');
-      } finally {
-        // IMPORTANT: Make sure to always call the `release` function.
-        release();
-        console.log(`${id} release the lock`);
-      }
-    };
+  const accessTheResource = async (taskId: number) => {
+    const release = await lockController.acquire();
+    console.log(`Task ${taskId} acquire the lock`);
+    try {
+      // access the resource protected by this lock
+      await setTimeout(1, 'just to simulate some logic');
+    } finally {
+      // IMPORTANT: Make sure to always call the `release` function.
+      release();
+      console.log(`Task ${taskId} release the lock`);
+    }
+  };
 
-    await Promise.all([accessTheResource(1), accessTheResource(2), accessTheResource(3)]);
-  }
+  await Promise.all([accessTheResource(1), accessTheResource(2), accessTheResource(3)]);
+}
 
 ```
-`exampleWithConcurrency(1);`
+`exampleLockControllerWithConcurrency(1);`
 ```console
-1 acquire the lock
-1 release the lock
-2 acquire the lock
-2 acquire the lock
-3 acquire the lock
-3 release the lock
+Task 1 acquire the lock
+Task 1 release the lock
+Task 2 acquire the lock
+Task 2 acquire the lock
+Task 3 acquire the lock
+Task 3 release the lock
 ```
-`exampleWithConcurrency(2);`
+`exampleLockControllerWithConcurrency(2);`
 ```console
-1 acquire the lock
-2 acquire the lock
-1 release the lock
-3 acquire the lock
-2 release the lock
-3 release the lock
+Task 1 acquire the lock
+Task 2 acquire the lock
+Task 1 release the lock
+Task 3 acquire the lock
+Task 2 release the lock
+Task 3 release the lock
 ```
 
 ### TaskController class
@@ -101,14 +101,13 @@ Provides a mechanism to control concurrent asynchronous tasks execution.
 
 #### How to use
 
-##### concurrency = 1
-
 ```js
 import { TaskController } from "task-controller";
 
-  const taskController = new TaskController();
+export async function exampleTaskControllerWithConcurrency(concurrency: number){
+  const taskController = new TaskController<string>({ concurrency });
 
-  async function task(taskId: number) {
+  const task = async (taskId: number) {
     console.log(`Task ${taskId} selected to be executed`);
 
     await setTimeout(1, 'just to simulate some logic');
@@ -116,13 +115,24 @@ import { TaskController } from "task-controller";
     console.log(`Task ${taskId} finished`);
   }
 
-  await taskController.runForEach(task, [ 1, 2, 3 ]);
+  await taskController.runForEach([ 1, 2, 3 ], task);
+}
 ```
+`exampleTaskControllerWithConcurrency(1);`
 ```console
 Task 1 selected to be executed
 Task 1 finished
 Task 2 selected to be executed
 Task 2 finished
 Task 3 selected to be executed
+Task 3 finished
+```
+`exampleTaskControllerWithConcurrency(2);`
+```console
+Task 1 selected to be execute
+Task 2 selected to be executed
+Task 1 finished
+Task 3 selected to be executed
+Task 2 finished
 Task 3 finished
 ```

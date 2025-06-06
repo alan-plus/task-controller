@@ -33,6 +33,12 @@ const defaultOptions: Required<TaskControllerOptions> = {
   signal: { aborted: false } as AbortSignal,
 } satisfies TaskControllerOptions;
 
+/**
+ * The TaskController class provides a mechanism to control concurrent asynchronous tasks execution.
+ * 
+ * @since v1.0.0
+ * @see [source](https://github.com/alan-plus/task-controller/blob/v1.0.0/src/tasks/task-controller.ts)
+ */
 export class TaskController<T> {
   private readonly options: Required<TaskControllerOptions>;
   private readonly waitingQueue = new Array<WaitingTask>();
@@ -96,11 +102,7 @@ export class TaskController<T> {
     return Promise.all(promises);
   }
 
-  public async runForEachEntity<T, E>(
-    entities: E[],
-    task: (entity: E) => Promise<T>,
-    options?: TaskOptions
-  ): Promise<PromiseSettledResult<T>[]> {
+  public async runForEach<T, E>(entities: E[], task: (entity: E) => Promise<T>, options?: TaskOptions): Promise<PromiseSettledResult<T>[]> {
     const sanitizeOptions = OptionsSanitizerUtils.sanitize(options, defaultOptions);
 
     const promises = entities.map((entity) => {
