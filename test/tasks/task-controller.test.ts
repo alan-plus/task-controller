@@ -1,6 +1,7 @@
 import { setTimeout } from "timers/promises";
 import { TaskController } from "../../src/tasks/task-controller";
-import { DiscardReason, ReleaseBeforeFinishReason, TaskEntry, TaskEventError } from "../../src/tasks/task-controller.type";
+import { DiscardReason, ReleaseBeforeFinishReason, TaskEntry, TaskEventError } from "../../src/tasks/task-controller.types";
+import EventEmitter from "events";
 
 async function task(result: string, timeout: number, resultsInOrder?: string[]): Promise<string> {
   return new Promise<string>(async (resolve) => {
@@ -1008,4 +1009,54 @@ test("taskController: changeConcurrentLimit (0)", async () => {
 
   expect(runningLimitReachedBeforeRuntask).toBe(false);
   expect(runningLimitReachedAfterRuntask).toBe(true);
+});
+
+test("taskController: event handler with concurrency: 1", async () => {
+  const eventEmitter = new EventEmitter();
+  const taskController = new TaskController<string>();
+  const resultsInOrder = new Array<string>();
+
+  const handleEvent = async (event: string) => {
+    await setTimeout(10, undefined);
+    resultsInOrder.push(event);
+  };
+
+  eventEmitter.on("event", async (...args) => {
+    taskController.run(handleEvent, ...args);
+  });
+
+  eventEmitter.emit("event", "A");
+  eventEmitter.emit("event", "B");
+  eventEmitter.emit("event", "C");
+
+  await setTimeout(100, undefined);
+
+  expect(resultsInOrder[0]).toBe("A");
+  expect(resultsInOrder[1]).toBe("B");
+  expect(resultsInOrder[2]).toBe("C");
+});
+
+test("taskController: event handler with concurrency: 2", async () => {
+  const eventEmitter = new EventEmitter();
+  const taskController = new TaskController<string>({ concurrency: 2 });
+  const resultsInOrder = new Array<string>();
+
+  const handleEvent = async (event: string, timeout: number) => {
+    await setTimeout(timeout, undefined);
+    resultsInOrder.push(event);
+  };
+
+  eventEmitter.on("event", async (...args) => {
+    taskController.run(handleEvent, ...args);
+  });
+
+  eventEmitter.emit("event", "A", 120);
+  eventEmitter.emit("event", "B", 60);
+  eventEmitter.emit("event", "C", 65);
+
+  await setTimeout(160, undefined);
+
+  expect(resultsInOrder[0]).toBe("B");
+  expect(resultsInOrder[1]).toBe("A");
+  expect(resultsInOrder[2]).toBe("C");
 });

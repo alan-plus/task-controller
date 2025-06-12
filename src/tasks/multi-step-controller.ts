@@ -1,5 +1,5 @@
 import { LockController } from "../locks/lock-controller";
-import { MultiStepControllerOptions, MultiStepTask } from "./task-controller.type";
+import { MultiStepControllerOptions, MultiStepTask } from "./task-controller.types";
 
 export class MultiStepController<T> {
   private readonly options: Required<MultiStepControllerOptions>;

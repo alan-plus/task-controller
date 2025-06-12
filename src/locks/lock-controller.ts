@@ -1,5 +1,5 @@
 import { EventEmitter } from "events";
-import { LockEvent, LockEventError, LockControllerOptions, ReleaseFunction, TryAcquireResponse } from "./lock-controller.type";
+import { LockEvent, LockEventError, LockControllerOptions, ReleaseFunction, TryAcquireResponse } from "./lock-controller.types";
 import { OptionsSanitizerUtils } from "../utils/options-sanitizer.utils";
 
 type InternalReleaseFunction = ReleaseFunction & { (timeoutReached?: boolean): void };
