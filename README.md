@@ -88,6 +88,7 @@ Provides a mechanism to control concurrent asynchronous tasks execution.
 `new TaskController(options?: TaskControllerOptions);`
 
 #### Options
+
 - `concurrency` (number, default: 1) maximum concurrent task execution.
 - `queueType` ("FIFO" | "LIFO", default: "FIFO")
   - FIFO: first request, first run.
@@ -136,3 +137,14 @@ Task 3 selected to be executed
 Task 2 finished
 Task 3 finished
 ```
+### MultiStepController class
+
+Provides a mechanism to control concurrent asynchronous multi step tasks execution. 
+
+#### Constructor
+
+`new MultiStepController(options: MultiStepControllerOptions);`
+
+#### Options
+
+- `stepConcurrencies` (number[], mandatory) the cuncurrency limit of each step.

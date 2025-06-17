@@ -1,23 +1,35 @@
 import { LockController } from "../locks/lock-controller";
-import { MultiStepControllerOptions, MultiStepTask } from "./task-controller.types";
+import { AllowedLengths, FixedLengthArray, MultiStepControllerOptions, MultiStepTask } from "./task-controller.types";
 
-export class MultiStepController<T> {
-  private readonly options: Required<MultiStepControllerOptions>;
-  private readonly stepLocks = new Array<LockController>();
+export class MultiStepController<T, N extends AllowedLengths> {
+  private readonly options: Required<MultiStepControllerOptions<N>>;
+  private readonly stepLocks;
 
-  constructor(options: MultiStepControllerOptions) {
+  constructor(options: MultiStepControllerOptions<N>) {
     this.options = options;
+
+    const _stepLocks = new Array<LockController>();
     this.options.stepConcurrencies.forEach((concurrentLimit) => {
-      this.stepLocks.push(new LockController({ concurrency: concurrentLimit }));
+      _stepLocks.push(new LockController({ concurrency: concurrentLimit }));
     });
+
+    this.stepLocks = _stepLocks as FixedLengthArray<LockController, N>;
   }
 
-  public async run<T>(task: MultiStepTask<T>): Promise<T> {
-    return await task(...this.stepLocks);
+  public async run<T>(task: MultiStepTask<T, N>, ...args: any[]): Promise<T> {
+    return await task(this.stepLocks, ...args);
   }
 
-  public async runMany<T>(tasks: Array<MultiStepTask<T>>): Promise<T[]> {
-    const promises = tasks.map((task) => task(...this.stepLocks));
+  public async runMany<T>(tasks: { task: MultiStepTask<T, N>; args?: any[] }[]): Promise<T[]> {
+    const promises = tasks.map((taskData) => {
+      const { task, args } = taskData;
+
+      if (args) {
+        return task(this.stepLocks, ...args);
+      } else {
+        return task(this.stepLocks);
+      }
+    });
 
     return Promise.all(promises);
   }

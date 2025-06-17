@@ -7,6 +7,7 @@ import {
   TaskEventError,
   TaskOptions,
   TryRunResponse,
+  Task,
 } from "./task-controller.types";
 import { OptionsSanitizerUtils } from "../utils/options-sanitizer.utils";
 
@@ -104,7 +105,7 @@ export class TaskController<T> {
    * @param args The arguments to pass to the task
    * @returns A promise that resolves when the task is finished
    */
-  public async run<T>(task: (...args: any[]) => Promise<T>, ...args: any[]): Promise<PromiseSettledResult<T>> {
+  public async run<T>(task: Task<T>, ...args: any[]): Promise<PromiseSettledResult<T>> {
     return await this.enqueueAndRun(task, undefined, ...args);
   }
 
@@ -115,11 +116,7 @@ export class TaskController<T> {
    * @param options The options to pass to the task
    * @param args The arguments to pass to the task
    */
-  public async runWithOptions<T>(
-    task: (...args: any[]) => Promise<T>,
-    options: TaskOptions,
-    ...args: any[]
-  ): Promise<PromiseSettledResult<T>> {
+  public async runWithOptions<T>(task: Task<T>, options: TaskOptions, ...args: any[]): Promise<PromiseSettledResult<T>> {
     return await this.enqueueAndRun(task, OptionsSanitizerUtils.sanitize(options, defaultOptions), ...args);
   }
 
@@ -129,9 +126,7 @@ export class TaskController<T> {
    * @param tasks The tasks to run
    * @returns A promise that resolves when all tasks are finished
    */
-  public async runMany<T>(
-    tasks: { task: (...args: any[]) => Promise<T>; options?: TaskOptions; args?: any[] }[]
-  ): Promise<PromiseSettledResult<T>[]> {
+  public async runMany<T>(tasks: { task: Task<T>; options?: TaskOptions; args?: any[] }[]): Promise<PromiseSettledResult<T>[]> {
     const promises = tasks.map((taskData) => {
       const { task, options, args } = taskData;
 
@@ -152,11 +147,7 @@ export class TaskController<T> {
    * @param task The task function to run
    * @param options The options to pass to the task
    */
-  public async runForEachArgs<T>(
-    argsArray: any[][],
-    task: (...args: any[]) => Promise<T>,
-    options?: TaskOptions
-  ): Promise<PromiseSettledResult<T>[]> {
+  public async runForEachArgs<T>(argsArray: any[][], task: Task<T>, options?: TaskOptions): Promise<PromiseSettledResult<T>[]> {
     const sanitizeOptions = OptionsSanitizerUtils.sanitize(options, defaultOptions);
 
     const promises = argsArray.map((args) => {
@@ -193,7 +184,7 @@ export class TaskController<T> {
    * @param args The arguments to pass to the task
    * @returns A {TryRunResponse} object
    */
-  public tryRun<T>(task: (...args: any[]) => Promise<T>, ...args: any[]): TryRunResponse<T> {
+  public tryRun<T>(task: Task<T>, ...args: any[]): TryRunResponse<T> {
     return this.tryRunWithOptions(task, undefined, args);
   }
 
@@ -208,7 +199,7 @@ export class TaskController<T> {
    * @param args The arguments to pass to the task
    * @returns A {TryRunResponse} object
    */
-  public tryRunWithOptions<T>(task: (...args: any[]) => Promise<T>, options?: TaskOptions, ...args: any[]): TryRunResponse<T> {
+  public tryRunWithOptions<T>(task: Task<T>, options?: TaskOptions, ...args: any[]): TryRunResponse<T> {
     const someOneIsWaitingTheLock = this.waitingQueue.length > 0;
     if (someOneIsWaitingTheLock) {
       return { available: false };
@@ -347,11 +338,7 @@ export class TaskController<T> {
     });
   }
 
-  private async enqueueAndRun<T>(
-    task: (...args: any[]) => Promise<T>,
-    options: TaskOptions | undefined,
-    ...args: any[]
-  ): Promise<PromiseSettledResult<T>> {
+  private async enqueueAndRun<T>(task: Task<T>, options: TaskOptions | undefined, ...args: any[]): Promise<PromiseSettledResult<T>> {
     const { release, taskEntry } = await this.acquire(options, ...args);
     try {
       const value = await task(...taskEntry.args);

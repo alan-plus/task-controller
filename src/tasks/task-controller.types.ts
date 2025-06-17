@@ -2,6 +2,11 @@ import { LockController } from "../locks/lock-controller";
 import { QueueType } from "../locks/lock-controller.types";
 
 /**
+ * The function that represent a task.
+ */
+export type Task<T> = (...args: any[]) => Promise<T>;
+
+/**
  * The type representing a task entry with its arguments, options, and completion status.
  */
 export type TaskEntry = {
@@ -71,9 +76,32 @@ export type DiscardReason = "timeoutReached" | "forced" | "abortSignal";
 /**
  * The type of the options for multi-step controllers.
  */
-export type MultiStepControllerOptions = { stepConcurrencies: number[] };
+export type MultiStepControllerOptions<N extends AllowedLengths> = { stepConcurrencies: FixedLengthArray<number, N> };
 
 /**
  * The type of the function for multi-step tasks that receive step locks as parameters.
  */
-export type MultiStepTask<T> = (...stepLocks: LockController[]) => Promise<T>;
+export type MultiStepTask<T, N extends AllowedLengths> = (stepLocks: FixedLengthArray<LockController, N>, ...args: any[]) => Promise<T>;
+
+export type AllowedLengths = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20;
+
+export type FixedLengthArray<T, N extends AllowedLengths> =
+  N extends 2 ? [T, T] :
+  N extends 3 ? [T, T, T] :
+  N extends 4 ? [T, T, T, T] :
+  N extends 5 ? [T, T, T, T, T] :
+  N extends 6 ? [T, T, T, T, T, T] :
+  N extends 7 ? [T, T, T, T, T, T, T] :
+  N extends 8 ? [T, T, T, T, T, T, T, T] :
+  N extends 9 ? [T, T, T, T, T, T, T, T, T] :
+  N extends 10 ? [T, T, T, T, T, T, T, T, T, T] :
+  N extends 11 ? [T, T, T, T, T, T, T, T, T, T, T] :
+  N extends 12 ? [T, T, T, T, T, T, T, T, T, T, T, T] :
+  N extends 13 ? [T, T, T, T, T, T, T, T, T, T, T, T, T] :
+  N extends 14 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T] :
+  N extends 15 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T] :
+  N extends 16 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T] :
+  N extends 17 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T] :
+  N extends 18 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T] :
+  N extends 19 ? [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T] :
+  [T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T];

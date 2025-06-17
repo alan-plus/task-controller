@@ -1,6 +1,6 @@
 import { setTimeout } from "timers/promises";
 import { LockController } from "../../src/locks/lock-controller";
-import { LockEventError, ReleaseFunction } from "../../src/locks/lock-controller.type";
+import { LockEventError, ReleaseFunction } from "../../src/locks/lock-controller.types";
 
 class Task {
   constructor(
