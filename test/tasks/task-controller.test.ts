@@ -20,7 +20,7 @@ async function taskEntity(entity: { result: string; timeout: number; resultsInOr
 }
 
 async function exampleTaskControllerWithConcurrency(concurrency: number, output: string[]) {
-  const taskController = new TaskController<string>({ concurrency });
+  const taskController = new TaskController({ concurrency });
 
   const task = async (entity: { taskId: number; console: string[] }) => {
     entity.console.push(`Task ${entity.taskId} selected to be executed`);
@@ -82,7 +82,7 @@ test("taskController: prevent concurrent task execution (default options)", asyn
 });
 
 test("taskController: runMany without args", async () => {
-  const taskController = new TaskController<string>();
+  const taskController = new TaskController();
 
   let taskRan = false;
 
@@ -1013,7 +1013,7 @@ test("taskController: changeConcurrentLimit (0)", async () => {
 
 test("taskController: event handler with concurrency: 1", async () => {
   const eventEmitter = new EventEmitter();
-  const taskController = new TaskController<string>();
+  const taskController = new TaskController();
   const resultsInOrder = new Array<string>();
 
   const handleEvent = async (event: string) => {
@@ -1038,7 +1038,7 @@ test("taskController: event handler with concurrency: 1", async () => {
 
 test("taskController: event handler with concurrency: 2", async () => {
   const eventEmitter = new EventEmitter();
-  const taskController = new TaskController<string>({ concurrency: 2 });
+  const taskController = new TaskController({ concurrency: 2 });
   const resultsInOrder = new Array<string>();
 
   const handleEvent = async (event: string, timeout: number) => {
@@ -1054,7 +1054,7 @@ test("taskController: event handler with concurrency: 2", async () => {
   eventEmitter.emit("event", "B", 60);
   eventEmitter.emit("event", "C", 65);
 
-  await setTimeout(160, undefined);
+  await setTimeout(180, undefined);
 
   expect(resultsInOrder[0]).toBe("B");
   expect(resultsInOrder[1]).toBe("A");

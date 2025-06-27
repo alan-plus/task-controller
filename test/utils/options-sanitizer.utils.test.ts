@@ -1,45 +1,49 @@
 import { OptionsSanitizerUtils } from "../../src/utils/options-sanitizer.utils";
 
-test("sanitizeToRequired: undefined options", async () => {
-  type OptionType = {field1?: string}; 
+test("sanitizeAndAddDefaults: undefined options", async () => {
+  type OptionType = { field1?: string };
   const options: OptionType | undefined = undefined;
-  const defaultOptions = {field1: "stringField"} as Required<OptionType>;
-  
-  const sanitizedOptions = OptionsSanitizerUtils.sanitizeToRequired<OptionType>(options, defaultOptions);
-  
+  const exampleOptions = { field1: "stringField" } as Required<OptionType>;
+  const defaultOptions = { field1: "stringField" } as OptionType;
+
+  const sanitizedOptions = OptionsSanitizerUtils.sanitizeAndAddDefaults<OptionType>(options, exampleOptions, defaultOptions);
+
   expect(sanitizedOptions.field1).toBe("stringField");
 });
 
-test("sanitizeToRequired: different type field", async () => {
-  type OptionType = {field1?: string}; 
-  const options: OptionType = {field1: []} as unknown as OptionType;
-  const defaultOptions = {field1: "stringField"} as Required<OptionType>;
-  
-  const sanitizedOptions = OptionsSanitizerUtils.sanitizeToRequired<OptionType>(options, defaultOptions);
-  
+test("sanitizeAndAddDefaults: different type field", async () => {
+  type OptionType = { field1?: string };
+  const options: OptionType = { field1: [] } as unknown as OptionType;
+  const exampleOptions = { field1: "stringField" } as Required<OptionType>;
+  const defaultOptions = { field1: "stringField" } as OptionType;
+
+  const sanitizedOptions = OptionsSanitizerUtils.sanitizeAndAddDefaults<OptionType>(options, exampleOptions, defaultOptions);
+
   expect(sanitizedOptions.field1).toBe("stringField");
 });
 
-test("sanitizeToRequired: respect functions", async () => {
+test("sanitizeAndAddDefaults: respect functions", async () => {
   const aFunction = () => {};
 
-  type OptionType = {aFunction?: () => {}}; 
-  const options: OptionType = {aFunction} as OptionType;
-  const defaultOptions = {aFunction: () => {}} as Required<OptionType>;
-  
-  const sanitizedOptions = OptionsSanitizerUtils.sanitizeToRequired<OptionType>(options, defaultOptions);
-  
+  type OptionType = { aFunction?: () => {} };
+  const options: OptionType = { aFunction } as OptionType;
+  const exampleOptions = { aFunction: () => {} } as Required<OptionType>;
+  const defaultOptions = { aFunction: () => {} } as OptionType;
+
+  const sanitizedOptions = OptionsSanitizerUtils.sanitizeAndAddDefaults<OptionType>(options, exampleOptions, defaultOptions);
+
   expect(sanitizedOptions.aFunction).toBe(aFunction);
 });
 
-test("sanitizeToRequired: respect abort", async () => {
-    const abortController = new AbortController();
+test("sanitizeAndAddDefaults: respect abort", async () => {
+  const abortController = new AbortController();
 
-  type OptionType = {signal: AbortSignal}; 
-  const options: OptionType = {signal: abortController.signal} as OptionType;
-  const defaultOptions = {signal: { aborted: false } as AbortSignal} as Required<OptionType>;
-  
-  const sanitizedOptions = OptionsSanitizerUtils.sanitizeToRequired<OptionType>(options, defaultOptions);
+  type OptionType = { signal: AbortSignal };
+  const options: OptionType = { signal: abortController.signal } as OptionType;
+  const exampleOptions = { signal: { aborted: false } as AbortSignal } as Required<OptionType>;
+  const defaultOptions = { signal: { aborted: false } as AbortSignal } as OptionType;
+
+  const sanitizedOptions = OptionsSanitizerUtils.sanitizeAndAddDefaults<OptionType>(options, exampleOptions, defaultOptions);
 
   expect(sanitizedOptions.signal).toBe(abortController.signal);
   abortController.abort();
@@ -47,25 +51,25 @@ test("sanitizeToRequired: respect abort", async () => {
 });
 
 test("sanitize: undefined options", async () => {
-  type OptionType = {field1?: number}; 
+  type OptionType = { field1?: number };
   const options: OptionType | undefined = undefined;
-  const defaultOptions = {field1: 100} as Required<OptionType>;
-  
-  const sanitizedOptions = OptionsSanitizerUtils.sanitize<OptionType>(options, defaultOptions);
-  
+  const exampleOptions = { field1: 100 } as Required<OptionType>;
+
+  const sanitizedOptions = OptionsSanitizerUtils.sanitize<OptionType>(options, exampleOptions);
+
   expect(sanitizedOptions).toBe(undefined);
 });
 
 test("sanitize: different type field", async () => {
-  type OptionType = {field1?: number}; 
-  const options: OptionType = {field1: "stringField"} as unknown as OptionType;
-  const defaultOptions = {field1: 100} as Required<OptionType>;
-  
-  const sanitizedOptions = OptionsSanitizerUtils.sanitize<OptionType>(options, defaultOptions);
-  
-  if(sanitizedOptions !== undefined){
+  type OptionType = { field1?: number };
+  const options: OptionType = { field1: "stringField" } as unknown as OptionType;
+  const exampleOptions = { field1: 100 } as Required<OptionType>;
+
+  const sanitizedOptions = OptionsSanitizerUtils.sanitize<OptionType>(options, exampleOptions);
+
+  if (sanitizedOptions !== undefined) {
     expect(sanitizedOptions.field1).toBe(undefined);
-  }else{
+  } else {
     fail("sanitizedOptions missed");
   }
 });

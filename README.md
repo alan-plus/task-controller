@@ -85,7 +85,8 @@ Provides a mechanism to control concurrent asynchronous tasks execution.
 
 #### Constructor
 
-`new TaskController(options?: TaskControllerOptions);`
+`new TaskController<T>(options?: TaskControllerOptions);`
+- `T`: the type returned by the task
 
 #### Options
 
@@ -106,7 +107,7 @@ Provides a mechanism to control concurrent asynchronous tasks execution.
 import { TaskController } from "task-controller";
 
 export async function exampleTaskControllerWithConcurrency(concurrency: number){
-  const taskController = new TaskController<string>({ concurrency });
+  const taskController = new TaskController({ concurrency });
 
   const task = async (taskId: number) {
     console.log(`Task ${taskId} selected to be executed`);
@@ -139,12 +140,70 @@ Task 3 finished
 ```
 ### MultiStepController class
 
-Provides a mechanism to control concurrent asynchronous multi step tasks execution. 
+Provides a mechanism to control concurrent multi step tasks execution. 
 
 #### Constructor
 
-`new MultiStepController(options: MultiStepControllerOptions);`
+`new MultiStepController<T, N>(options: MultiStepControllerOptions);`
+- `T`: the type returned by the task
+- `N`: number of steps
 
 #### Options
 
 - `stepConcurrencies` (number[], mandatory) the cuncurrency limit of each step.
+
+#### How to use
+```js
+import { MultiStepController } from "task-controller";
+
+export async function exampleMultiStepControllerWithConcurrency(){
+  const multiStepController = new MultiStepController<void, 2>({ stepConcurrencies: [1, 2] });
+
+  const task = async (
+    stepLocks: FixedLengthArray<LockController, 2>,
+    entity: { taskId: number; step1Timeout: number; step2Timeout: number }
+  ) => {
+    const release1 = await stepLocks[0].acquire();
+    try {
+      console.log(`Task ${entity.taskId} selected to execute step 1`);
+      await setTimeout(entity.step1Timeout, "just to simulate some logic");
+      console.log(`Task ${entity.taskId} finished step 1`);
+    } finally {
+      release1();
+    }
+
+    const release2 = await stepLocks[1].acquire();
+    try {
+      console.log(`Task ${entity.taskId} selected to execute step 2`);
+      await setTimeout(entity.step2Timeout, "just to simulate some logic");
+      console.log(`Task ${entity.taskId} finished step 2`);
+    } finally {
+      release2();
+    }
+  };
+
+  await multiStepController.runForEach(
+    [
+      { taskId: 1, step1Timeout: 40, step2Timeout: 120 },
+      { taskId: 2, step1Timeout: 30, step2Timeout: 50 },
+      { taskId: 3, step1Timeout: 30, step2Timeout: 50 },
+    ],
+    task
+  );
+}
+```
+`exampleMultiStepControllerWithConcurrency();`
+```console
+Task 1 selected to execute step 1
+Task 1 finished step 1
+Task 2 selected to execute step 1
+Task 1 selected to execute step 2
+Task 2 finished step 1
+Task 3 selected to execute step 1
+Task 2 selected to execute step 2
+Task 3 finished step 1
+Task 2 finished step 2
+Task 3 selected to execute step 2
+Task 1 finished step 2
+Task 3 finished step 2
+```

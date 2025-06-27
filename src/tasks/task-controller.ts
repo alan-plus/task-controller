@@ -10,6 +10,7 @@ import {
   Task,
 } from "./task-controller.types";
 import { OptionsSanitizerUtils } from "../utils/options-sanitizer.utils";
+import { QueueType } from "../locks/lock-controller.types";
 
 type WaitingTask = TaskEntry & {
   resolve(result: AcquireResponse): void;
@@ -23,7 +24,14 @@ type AcquireResponse = {
   taskEntry: TaskEntry;
 };
 
-const defaultOptions: Required<TaskControllerOptions> = {
+const defaultOptions: TaskControllerOptionsWithDefaults = {
+  concurrency: 1,
+  queueType: "FIFO",
+  releaseTimeout: 0,
+  waitingTimeout: 0,
+} satisfies TaskControllerOptionsWithDefaults;
+
+const exampleOptions: Required<TaskControllerOptionsWithDefaults> = {
   concurrency: 1,
   queueType: "FIFO",
   releaseTimeout: 0,
@@ -32,7 +40,14 @@ const defaultOptions: Required<TaskControllerOptions> = {
   waitingTimeoutHandler: () => {},
   errorHandler: () => {},
   signal: { aborted: false } as AbortSignal,
-} satisfies TaskControllerOptions;
+} satisfies TaskControllerOptionsWithDefaults;
+
+type TaskControllerOptionsWithDefaults = TaskControllerOptions & {
+  releaseTimeout: number;
+  waitingTimeout: number;
+  queueType: QueueType;
+  concurrency: number;
+};
 
 /**
  * The TaskController class provides a mechanism to control concurrent asynchronous tasks execution.
@@ -62,7 +77,7 @@ const defaultOptions: Required<TaskControllerOptions> = {
  * @see [source](https://github.com/alan-plus/task-controller/blob/v1.0.0/src/tasks/task-controller.ts)
  */
 export class TaskController<T> {
-  private readonly options: Required<TaskControllerOptions>;
+  private readonly options: TaskControllerOptionsWithDefaults;
   private readonly waitingQueue = new Array<WaitingTask>();
   private readonly runningQueue = new Map<RunningTask, TaskControllerReleaseFunction>();
   private readonly expiredQueue = new Set<RunningTask>();
@@ -105,7 +120,7 @@ export class TaskController<T> {
    * @param args The arguments to pass to the task
    * @returns A promise that resolves when the task is finished
    */
-  public async run<T>(task: Task<T>, ...args: any[]): Promise<PromiseSettledResult<T>> {
+  public async run(task: Task<T>, ...args: any[]): Promise<PromiseSettledResult<T>> {
     return await this.enqueueAndRun(task, undefined, ...args);
   }
 
@@ -116,8 +131,8 @@ export class TaskController<T> {
    * @param options The options to pass to the task
    * @param args The arguments to pass to the task
    */
-  public async runWithOptions<T>(task: Task<T>, options: TaskOptions, ...args: any[]): Promise<PromiseSettledResult<T>> {
-    return await this.enqueueAndRun(task, OptionsSanitizerUtils.sanitize(options, defaultOptions), ...args);
+  public async runWithOptions(task: Task<T>, options: TaskOptions, ...args: any[]): Promise<PromiseSettledResult<T>> {
+    return await this.enqueueAndRun(task, OptionsSanitizerUtils.sanitize(options, exampleOptions), ...args);
   }
 
   /**
@@ -126,14 +141,14 @@ export class TaskController<T> {
    * @param tasks The tasks to run
    * @returns A promise that resolves when all tasks are finished
    */
-  public async runMany<T>(tasks: { task: Task<T>; options?: TaskOptions; args?: any[] }[]): Promise<PromiseSettledResult<T>[]> {
+  public async runMany(tasks: { task: Task<T>; options?: TaskOptions; args?: any[] }[]): Promise<PromiseSettledResult<T>[]> {
     const promises = tasks.map((taskData) => {
       const { task, options, args } = taskData;
 
       if (args) {
-        return this.enqueueAndRun(task, OptionsSanitizerUtils.sanitize(options, defaultOptions), ...args);
+        return this.enqueueAndRun(task, OptionsSanitizerUtils.sanitize(options, exampleOptions), ...args);
       } else {
-        return this.enqueueAndRun(task, OptionsSanitizerUtils.sanitize(options, defaultOptions));
+        return this.enqueueAndRun(task, OptionsSanitizerUtils.sanitize(options, exampleOptions));
       }
     });
 
@@ -147,8 +162,8 @@ export class TaskController<T> {
    * @param task The task function to run
    * @param options The options to pass to the task
    */
-  public async runForEachArgs<T>(argsArray: any[][], task: Task<T>, options?: TaskOptions): Promise<PromiseSettledResult<T>[]> {
-    const sanitizeOptions = OptionsSanitizerUtils.sanitize(options, defaultOptions);
+  public async runForEachArgs(argsArray: any[][], task: Task<T>, options?: TaskOptions): Promise<PromiseSettledResult<T>[]> {
+    const sanitizeOptions = OptionsSanitizerUtils.sanitize(options, exampleOptions);
 
     const promises = argsArray.map((args) => {
       return this.enqueueAndRun(task, sanitizeOptions, ...args);
@@ -164,8 +179,8 @@ export class TaskController<T> {
    * @param task The task function to run
    * @param options The options to pass to the task
    */
-  public async runForEach<T, E>(entities: E[], task: (entity: E) => Promise<T>, options?: TaskOptions): Promise<PromiseSettledResult<T>[]> {
-    const sanitizeOptions = OptionsSanitizerUtils.sanitize(options, defaultOptions);
+  public async runForEach<E>(entities: E[], task: (entity: E) => Promise<T>, options?: TaskOptions): Promise<PromiseSettledResult<T>[]> {
+    const sanitizeOptions = OptionsSanitizerUtils.sanitize(options, exampleOptions);
 
     const promises = entities.map((entity) => {
       return this.enqueueAndRun(task, sanitizeOptions, entity);
@@ -184,7 +199,7 @@ export class TaskController<T> {
    * @param args The arguments to pass to the task
    * @returns A {TryRunResponse} object
    */
-  public tryRun<T>(task: Task<T>, ...args: any[]): TryRunResponse<T> {
+  public tryRun(task: Task<T>, ...args: any[]): TryRunResponse<T> {
     return this.tryRunWithOptions(task, undefined, args);
   }
 
@@ -199,7 +214,7 @@ export class TaskController<T> {
    * @param args The arguments to pass to the task
    * @returns A {TryRunResponse} object
    */
-  public tryRunWithOptions<T>(task: Task<T>, options?: TaskOptions, ...args: any[]): TryRunResponse<T> {
+  public tryRunWithOptions(task: Task<T>, options?: TaskOptions, ...args: any[]): TryRunResponse<T> {
     const someOneIsWaitingTheLock = this.waitingQueue.length > 0;
     if (someOneIsWaitingTheLock) {
       return { available: false };
@@ -210,7 +225,7 @@ export class TaskController<T> {
       return { available: false };
     }
 
-    return { available: true, run: () => this.enqueueAndRun(task, OptionsSanitizerUtils.sanitize(options, defaultOptions), args) };
+    return { available: true, run: () => this.enqueueAndRun(task, OptionsSanitizerUtils.sanitize(options, exampleOptions), args) };
   }
 
   /**
@@ -316,6 +331,8 @@ export class TaskController<T> {
       this.waitingQueue.push(taskEntry);
 
       const waitingTimeout = taskEntry.options?.waitingTimeout ?? this.options.waitingTimeout;
+      const timeoutHandler = taskEntry.options?.waitingTimeoutHandler ?? this.options.waitingTimeoutHandler;
+
       if (waitingTimeout > 0) {
         taskEntry.waitingTimeoutId = setTimeout(() => {
           const taskIndex = this.waitingQueue.indexOf(taskEntry);
@@ -326,8 +343,9 @@ export class TaskController<T> {
           this.emit("task-discarded", taskEntry);
 
           try {
-            const timeoutHandler = taskEntry.options?.waitingTimeoutHandler ?? this.options.waitingTimeoutHandler;
-            timeoutHandler(taskEntry);
+            if (timeoutHandler) {
+              timeoutHandler(taskEntry);
+            }
           } catch (error) {
             this.emit("error", taskEntry, { code: "waiting-timeout-handler-failure", error } as TaskEventError);
           }
@@ -349,7 +367,9 @@ export class TaskController<T> {
 
       try {
         const errorHandler = options?.errorHandler ?? this.options.errorHandler;
-        errorHandler(taskEntry, error);
+        if (errorHandler) {
+          errorHandler(taskEntry, error);
+        }
       } catch (errorOnErrorHandler) {
         this.emit("error", taskEntry, { code: "error-handler-failure", error: errorOnErrorHandler } as TaskEventError);
       }
@@ -422,7 +442,9 @@ export class TaskController<T> {
 
         try {
           const timeoutHandler = taskEntry.options?.releaseTimeoutHandler ?? this.options.releaseTimeoutHandler;
-          timeoutHandler(taskEntry);
+          if (timeoutHandler) {
+            timeoutHandler(taskEntry);
+          }
         } catch (error) {
           this.emit("error", taskEntry, { code: "release-timeout-handler-failure", error } as TaskEventError);
         }
@@ -462,7 +484,7 @@ export class TaskController<T> {
     return taskEntry;
   }
 
-  private sanitizeOptions(options?: TaskControllerOptions): Required<TaskControllerOptions> {
+  private sanitizeOptions(options?: Partial<TaskControllerOptionsWithDefaults>): TaskControllerOptionsWithDefaults {
     if (options) {
       const sanitizedConcurrentLimit = OptionsSanitizerUtils.sanitizeNumberToPositiveGraterThanZeroInteger(options.concurrency);
       if (sanitizedConcurrentLimit === undefined) {
@@ -472,6 +494,6 @@ export class TaskController<T> {
       }
     }
 
-    return OptionsSanitizerUtils.sanitizeToRequired(options, defaultOptions);
+    return OptionsSanitizerUtils.sanitizeAndAddDefaults(options, exampleOptions, defaultOptions);
   }
 }

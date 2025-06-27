@@ -1,5 +1,5 @@
 import { EventEmitter } from "events";
-import { LockEvent, LockEventError, LockControllerOptions, ReleaseFunction, TryAcquireResponse } from "./lock-controller.types";
+import { LockEvent, LockEventError, LockControllerOptions, ReleaseFunction, TryAcquireResponse, QueueType } from "./lock-controller.types";
 import { OptionsSanitizerUtils } from "../utils/options-sanitizer.utils";
 
 type InternalReleaseFunction = ReleaseFunction & { (timeoutReached?: boolean): void };
@@ -9,12 +9,24 @@ type WaitingLock = {
 };
 type AcquiredLock = { releaseTimeoutId?: NodeJS.Timeout };
 
-const defaultOptions: Required<LockControllerOptions> = {
+const defaultOptions: LockControllerOptionsWithDefaults = {
+  concurrency: 1,
+  queueType: "FIFO",
+  releaseTimeout: 0,
+} satisfies LockControllerOptionsWithDefaults;
+
+const exampleOptions: Required<LockControllerOptionsWithDefaults> = {
   concurrency: 1,
   queueType: "FIFO",
   releaseTimeout: 0,
   releaseTimeoutHandler: () => {},
-} satisfies LockControllerOptions;
+} satisfies LockControllerOptionsWithDefaults;
+
+type LockControllerOptionsWithDefaults = LockControllerOptions & {
+  queueType: QueueType;
+  releaseTimeout: number;
+  concurrency: number;
+};
 
 /**
  * The LockController class provides a mechanism to control concurrent access to resources.
@@ -25,7 +37,7 @@ const defaultOptions: Required<LockControllerOptions> = {
  *
  * const release = await lockController.acquire();
  * console.log(`lock acquired`);
- * 
+ *
  * try {
  *  // access the resource protected by this lock
  *   await setTimeout(1, 'just to simulate some logic');
@@ -39,7 +51,7 @@ const defaultOptions: Required<LockControllerOptions> = {
  * @see [source](https://github.com/alan-plus/task-controller/blob/v1.0.0/src/locks/lock-controller.ts)
  */
 export class LockController {
-  private readonly options: Required<LockControllerOptions>;
+  private readonly options: LockControllerOptionsWithDefaults;
   private readonly waitingQueue = new Array<WaitingLock>();
   private readonly acquiredQueue = new Map<AcquiredLock, ReleaseFunction>();
   private readonly internalEmitter = new EventEmitter();
@@ -162,7 +174,9 @@ export class LockController {
     if (this.options.releaseTimeout > 0) {
       lockEntry.releaseTimeoutId = setTimeout(() => {
         try {
-          this.options.releaseTimeoutHandler();
+          if (this.options.releaseTimeoutHandler) {
+            this.options.releaseTimeoutHandler();
+          }
         } catch (error) {
           this.emit("error", { code: "release-timeout-handler-failure", error } as LockEventError);
         }
@@ -203,7 +217,7 @@ export class LockController {
     return lockEntry;
   }
 
-  private sanitizeOptions(options?: LockControllerOptions): Required<LockControllerOptions> {
+  private sanitizeOptions(options?: Partial<LockControllerOptionsWithDefaults>): LockControllerOptionsWithDefaults {
     if (options) {
       const sanitizedConcurrentLimit = OptionsSanitizerUtils.sanitizeNumberToPositiveGraterThanZeroInteger(options.concurrency);
       if (sanitizedConcurrentLimit === undefined) {
@@ -213,6 +227,6 @@ export class LockController {
       }
     }
 
-    return OptionsSanitizerUtils.sanitizeToRequired(options, defaultOptions);
+    return OptionsSanitizerUtils.sanitizeAndAddDefaults(options, exampleOptions, defaultOptions);
   }
 }
