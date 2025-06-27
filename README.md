@@ -13,7 +13,7 @@ A set of classes that provide assistance with the concurrent access to shared re
 
 ### Installation:
 
-```
+```bash
 npm install task-controller
 ```
 
@@ -34,9 +34,20 @@ Provides a mechanism to control concurrent access to resources.
 - `releaseTimeout` (milliseconds > 0, defaults: none) prevent a task to acquire the lock indefinitely. If the lock has not already been released by the time the timeout is reached, it is released automatically.
 - `releaseTimeoutHandler` (callback, defaults: none) function to handle releaseTimeout event.
 
+#### API Reference
+
+- `acquire(): Promise<() => void>`
+Acquires a lock and returns a release function. The release function must be called to free the lock.
+- `isLocked(): boolean`
+Returns true if the lock is currently acquired by any task.
+- `getQueueLength(): number`
+Returns the number of tasks waiting to acquire the lock.
+- `clearQueue(): void`
+Removes all pending tasks from the queue without executing them.
+
 #### How to use
 
-```js
+```typescript
 import { LockController } from "task-controller";
 
 export async function exampleLockControllerWithConcurrency(concurrency: number){
@@ -101,9 +112,28 @@ Provides a mechanism to control concurrent asynchronous tasks execution.
 - `errorHandler`(callback, defaults: none) function to handle task error event.
 - `signal` (AbortSignal, defaults: none) once the signal has been aborted, no more tasks will be selected for execution. Any tasks that are currently running will continue as normal until completion.
 
+#### API Reference
+
+- `runForEach<T>(entities: T[], task: (entity: T) => Promise<any>): Promise<any[]>`
+Executes a task for each entity in the array, respecting the concurrency limit. Returns an array with the results of each task execution.
+- `runMany<T>(tasks: TaskEntry<T>[]): Promise<T[]>`
+Executes multiple tasks, respecting the concurrency limit. Returns an array with the results of each task execution.
+- `run<T>(task: () => Promise<T>): Promise<T>`
+Executes a single task, respecting the concurrency limit. Returns the result of the task execution.
+- `isRunning(): boolean`
+Returns true if there are tasks currently running.
+- `getQueueLength(): number`
+Returns the number of tasks waiting to be executed.
+- `clearQueue(): void`
+Removes all pending tasks from the queue without executing them.
+- `on(event: string, listener: (...args: any[]) => void): void`
+Adds an event listener for task events (error, waitingTimeout, releaseTimeout).
+- `off(event: string, listener: (...args: any[]) => void): void`
+Removes an event listener for task events.
+
 #### How to use
 
-```js
+```typescript
 import { TaskController } from "task-controller";
 
 export async function exampleTaskControllerWithConcurrency(concurrency: number){
@@ -152,8 +182,16 @@ Provides a mechanism to control concurrent multi step tasks execution.
 
 - `stepConcurrencies` (number[], mandatory) the cuncurrency limit of each step.
 
+#### API Reference
+
+- `runForEach<T>(entities: T[], task: (stepLocks: FixedLengthArray<LockController, N>, entity: T) => Promise<void>): Promise<void>` - Executes a task for each entity with step concurrency control
+- `runMany<T>(tasks: Array<{ task: (stepLocks: FixedLengthArray<LockController, N>) => Promise<T>, args?: any[] }>): Promise<T[]>` - Executes multiple tasks with step concurrency control
+- `run<T>(task: (stepLocks: FixedLengthArray<LockController, N>) => Promise<T>, args?: any[]): Promise<T>` - Executes a single task with step concurrency control
+
+
+
 #### How to use
-```js
+```typescript
 import { MultiStepController } from "task-controller";
 
 export async function exampleMultiStepControllerWithConcurrency(){

@@ -60,7 +60,7 @@ type TaskControllerOptionsWithDefaults = TaskControllerOptions & {
  * const taskController = new TaskController({ concurrency: 1 });
  *
  * // Create an event handler
- * const handleEvent = async (event) => {
+ * const handleEvent = async (event: any) => {
  *   // Process the event
  *   console.log(`Processing event: ${event.id}`);
  *   await someAsyncOperation(event);

@@ -47,6 +47,7 @@ type LockControllerOptionsWithDefaults = LockControllerOptions & {
  *  console.log(`lock released`);
  * }
  * ```
+ * 
  * @since v1.0.0
  * @see [source](https://github.com/alan-plus/task-controller/blob/v1.0.0/src/locks/lock-controller.ts)
  */
