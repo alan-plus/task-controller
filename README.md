@@ -1,4 +1,4 @@
-[![Coverage Status](https://coveralls.io/repos/github/alan-plus/task-controller/badge.svg?branch=development)](https://coveralls.io/github/alan-plus/task-controller?branch=development)
+[![Coverage Status](https://coveralls.io/repos/github/alan-plus/task-controller/badge.svg)](https://coveralls.io/github/alan-plus/task-controller)
 
 # Lock and Task Controller
 
