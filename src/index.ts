@@ -1,11 +1,7 @@
-import { LockMutex } from "./locks/lock-mutex";
-import { LockPool } from "./locks/lock-pool";
-import { TaskExecutorMutex } from "./task-executors/task-executor-mutex";
-import { TaskExecutorPool } from "./task-executors/task-executor-pool";
-import { TaskExecutorMultiStep } from "./task-executors/task-executor-multi-step";
+import { LockController } from "./locks/lock-controller";
+import { TaskController } from "./tasks/task-controller";
+import { MultiStepController } from "./tasks/multi-step-controller";
 
-export { LockMutex, LockPool, TaskExecutorMutex, TaskExecutorPool, TaskExecutorMultiStep };
-export * from "./types/lock.type";
-export * from "./types/task-executor.type";
-export * from "./interfaces/lock";
-export * from "./interfaces/task-executor";
+export { LockController, TaskController, MultiStepController };
+export * from "./locks/lock-controller.types";
+export * from "./tasks/task-controller.types";

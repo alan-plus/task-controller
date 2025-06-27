@@ -1,6 +1,6 @@
 {
   "name": "task-controller",
-  "version": "0.0.1-beta",
+  "version": "1.0.0",
   "private": false,
   "homepage": "https://github.com/alan-plus/task-controller",
   "repository": {
@@ -10,7 +10,7 @@
   "bugs": {
     "url": "https://github.com/alan-plus/task-controller/issues"
   },
-  "description": "Modern JavaScript task utility library",
+  "description": "Modern JavaScript concurrency control library",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [

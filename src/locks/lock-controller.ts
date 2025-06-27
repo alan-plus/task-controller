@@ -1,6 +1,5 @@
 import { EventEmitter } from "events";
-import { ILock } from "../interfaces/lock";
-import { LockEvent, LockEventError, LockPoolOptions, ReleaseFunction, TryAcquireResponse } from "../types/lock.type";
+import { LockEvent, LockEventError, LockControllerOptions, ReleaseFunction, TryAcquireResponse, QueueType } from "./lock-controller.types";
 import { OptionsSanitizerUtils } from "../utils/options-sanitizer.utils";
 
 type InternalReleaseFunction = ReleaseFunction & { (timeoutReached?: boolean): void };
@@ -10,84 +9,89 @@ type WaitingLock = {
 };
 type AcquiredLock = { releaseTimeoutId?: NodeJS.Timeout };
 
-const defaultOptions: Required<LockPoolOptions> = {
-  concurrentLimit: 1,
+const defaultOptions: LockControllerOptionsWithDefaults = {
+  concurrency: 1,
+  queueType: "FIFO",
+  releaseTimeout: 0,
+} satisfies LockControllerOptionsWithDefaults;
+
+const exampleOptions: Required<LockControllerOptionsWithDefaults> = {
+  concurrency: 1,
   queueType: "FIFO",
   releaseTimeout: 0,
   releaseTimeoutHandler: () => {},
-} satisfies LockPoolOptions;
+} satisfies LockControllerOptionsWithDefaults;
+
+type LockControllerOptionsWithDefaults = LockControllerOptions & {
+  queueType: QueueType;
+  releaseTimeout: number;
+  concurrency: number;
+};
 
 /**
- * The LockPool class can be used to allow limited concurrent access to a resource.
+ * The LockController class provides a mechanism to control concurrent access to resources.
  * ```js
- * import { LockPool } from "tasktly";
- * 
- *   // concurrent access to the resource limited to 2
- *   const lock = new LockPool({ concurrentLimit: 2 }); 
- * 
- *   await Promise.all([
- *     
- *     // Task 1 (will access the resource immediately)
- *     new Promise<any>(async (resolve) => {
- *       const release = await lock.acquire();
- *       try {
- *         // access the protected resource
- *         resolve();
- *       } finally {
- *         release();
- *       }
- *     }),
- * 
- *     // Task 2 (will access the resource immediately)
- *     new Promise<any>(async (resolve) => {
- *       const release = await lock.acquire();
- *       try {
- *         // access the protected resource
- *         resolve();
- *       } finally {
- *         release();
- *       }
- *     }),
- * 
- *     // Task 3 (will access the resource once 'Task 1' or 'Task 2' is completed)
- *     new Promise<any>(async (resolve) => {
- *       const release = await lock.acquire();
- *       try {
- *         // access the protected resource
- *         resolve();
- *       } finally {
- *         release();
- *       }
- *     }),
- *   ]);
+ * import { LockController } from "task-controller";
+ *
+ * const lockController = new LockController();
+ *
+ * const release = await lockController.acquire();
+ * console.log(`lock acquired`);
+ *
+ * try {
+ *  // access the resource protected by this lock
+ *   await setTimeout(1, 'just to simulate some logic');
+ * } finally {
+ *  // IMPORTANT: Make sure to always call the `release` function.
+ *  release();
+ *  console.log(`lock released`);
+ * }
  * ```
+ * 
  * @since v1.0.0
- * @see [source](https://github.com/alan-plus/tasktly/blob/v1.0.0/src/locks/lock-pool.ts)
+ * @see [source](https://github.com/alan-plus/task-controller/blob/v1.0.0/src/locks/lock-controller.ts)
  */
-export class LockPool implements ILock {
-  private readonly options: Required<LockPoolOptions>;
+export class LockController {
+  private readonly options: LockControllerOptionsWithDefaults;
   private readonly waitingQueue = new Array<WaitingLock>();
   private readonly acquiredQueue = new Map<AcquiredLock, ReleaseFunction>();
   private readonly internalEmitter = new EventEmitter();
 
   /**
-   * Creates a new LockPool instance.
-   * @param options {LockPoolOptions}.
+   * Creates a new LockController instance.
+   * @param options {LockControllerOptions}.
    */
-  constructor(options?: LockPoolOptions) {
+  constructor(options?: LockControllerOptions) {
     this.options = this.sanitizeOptions(options);
   }
 
+  /**
+   * Adds the `listener` function to the end of the listeners array for the event
+   *
+   * @param event a {LockEvent}
+   * @param listener The callback function
+   */
   public on(event: LockEvent, listener: (...args: any[]) => void): this {
     this.internalEmitter.on(event, listener);
     return this;
   }
 
+  /**
+   * Removes the specified `listener` from the listener array for the event.
+   *
+   * @param event a {LockEvent}
+   * @param listener The callback function
+   */
   public off(event: LockEvent, listener: (...args: any[]) => void): this {
     this.internalEmitter.off(event, listener);
     return this;
   }
 
+  /**
+   * Acquires the lock
+   *
+   * @returns Fulfills with a {ReleaseFunction} function once the lock is acquire.
+   */
   public async acquire(): Promise<ReleaseFunction> {
     return new Promise<ReleaseFunction>((resolve, reject) => {
       const lockEntry = { resolve, reject } satisfies WaitingLock;
@@ -96,13 +100,18 @@ export class LockPool implements ILock {
     });
   }
 
+  /**
+   * Acquires the lock only if one is available at the time of invocation.
+   *
+   * @returns {TryAcquireResponse}
+   */
   public tryAcquire(): TryAcquireResponse {
     const someOneIsWaitingTheLock = this.waitingQueue.length > 0;
     if (someOneIsWaitingTheLock) {
       return { acquired: false };
     }
 
-    const conncurrentLimitReached = this.acquiredQueue.size >= this.options.concurrentLimit;
+    const conncurrentLimitReached = this.acquiredQueue.size >= this.options.concurrency;
     if (conncurrentLimitReached) {
       return { acquired: false };
     }
@@ -112,11 +121,18 @@ export class LockPool implements ILock {
     return { acquired: true, release: releaseFunction };
   }
 
+  /**
+   * Indicates if the lock is currently available
+   *
+   */
   public isAvailable(): boolean {
-    const conncurrentLimitReached = this.acquiredQueue.size >= this.options.concurrentLimit;
+    const conncurrentLimitReached = this.acquiredQueue.size >= this.options.concurrency;
     return !conncurrentLimitReached;
   }
 
+  /**
+   * Force the release of all the acquired locks
+   */
   public releaseAcquiredLocks(): void {
     if (!this.acquiredQueue.size) {
       return;
@@ -159,7 +175,9 @@ export class LockPool implements ILock {
     if (this.options.releaseTimeout > 0) {
       lockEntry.releaseTimeoutId = setTimeout(() => {
         try {
-          this.options.releaseTimeoutHandler();
+          if (this.options.releaseTimeoutHandler) {
+            this.options.releaseTimeoutHandler();
+          }
         } catch (error) {
           this.emit("error", { code: "release-timeout-handler-failure", error } as LockEventError);
         }
@@ -200,16 +218,16 @@ export class LockPool implements ILock {
     return lockEntry;
   }
 
-  private sanitizeOptions(options?: LockPoolOptions): Required<LockPoolOptions> {
+  private sanitizeOptions(options?: Partial<LockControllerOptionsWithDefaults>): LockControllerOptionsWithDefaults {
     if (options) {
-      const sanitizedConcurrentLimit = OptionsSanitizerUtils.sanitizeNumberToPositiveGraterThanZeroInteger(options.concurrentLimit);
+      const sanitizedConcurrentLimit = OptionsSanitizerUtils.sanitizeNumberToPositiveGraterThanZeroInteger(options.concurrency);
       if (sanitizedConcurrentLimit === undefined) {
-        delete options.concurrentLimit;
+        delete options.concurrency;
       } else {
-        options.concurrentLimit = sanitizedConcurrentLimit;
+        options.concurrency = sanitizedConcurrentLimit;
       }
     }
 
-    return OptionsSanitizerUtils.sanitizeToRequired(options, defaultOptions);
+    return OptionsSanitizerUtils.sanitizeAndAddDefaults(options, exampleOptions, defaultOptions);
   }
 }
