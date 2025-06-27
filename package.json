@@ -11,6 +11,14 @@
     "url": "https://github.com/alan-plus/task-controller/issues"
   },
   "description": "Modern JavaScript concurrency control library",
+  "keywords": [
+    "concurrency",
+    "async",
+    "lock",
+    "task-queue",
+    "multi-step",
+    "typescript"
+  ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [

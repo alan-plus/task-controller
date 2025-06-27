@@ -1,6 +1,9 @@
 [![Coverage Status](https://coveralls.io/repos/github/alan-plus/task-controller/badge.svg)](https://coveralls.io/github/alan-plus/task-controller)
+[![npm version](https://badge.fury.io/js/task-controller.svg)](https://badge.fury.io/js/task-controller)
+[![npm downloads](https://img.shields.io/npm/dm/task-controller.svg)](https://www.npmjs.com/package/task-controller)
+[![bundle size](https://img.shields.io/bundlephobia/min/task-controller)](https://bundlephobia.com/package/task-controller)
 
-# Lock and Task Controller
+# Task Controller
 
 A set of classes that provide assistance with the concurrent access to shared resources and the control of asynchronous tasks.
 - Locks
