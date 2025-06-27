@@ -10,14 +10,28 @@
   "bugs": {
     "url": "https://github.com/alan-plus/task-controller/issues"
   },
-  "description": "Modern JavaScript concurrency control library",
+  "description": "Modern JavaScript/TypeScript concurrency control library for managing locks, task queues, and multi-step operations with configurable concurrency limits",
   "keywords": [
     "concurrency",
     "async",
     "lock",
     "task-queue",
     "multi-step",
-    "typescript"
+    "typescript",
+    "javascript",
+    "promise",
+    "queue",
+    "semaphore",
+    "mutex",
+    "rate-limiting",
+    "task-scheduler",
+    "async-control",
+    "resource-management",
+    "concurrent-execution",
+    "task-management",
+    "workflow-control",
+    "async-queue",
+    "concurrency-control"
   ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -32,6 +46,9 @@
   },
   "author": "Alan Pro",
   "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/node": "^22.14.1",
